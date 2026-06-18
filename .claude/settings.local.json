@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter --version)",
+      "Bash(xcodebuild -version)",
+      "Bash(xcode-select -p)",
+      "Bash(brew install *)",
+      "Bash(pod --version)",
+      "Read(//opt/homebrew/bin/**)",
+      "Bash(/opt/homebrew/bin/pod --version)",
+      "Bash(brew info *)",
+      "Bash(brew list *)",
+      "Bash(python3 -)",
+      "Bash(open \"/Users/mrzg/Work/metro_sound/build/macos/Build/Products/Debug/metro_sound.app\")",
+      "Bash(pkill -f metro_sound)",
+      "Bash(\"/Users/mrzg/Work/metro_sound/build/macos/Build/Products/Debug/metro_sound.app/Contents/MacOS/metro_sound\")",
+      "Bash(echo \"pid $!\")",
+      "Bash(pkill -f \"metro_sound\\\\|Metro Sound\")",
+      "Bash(open \"/Users/mrzg/Work/metro_sound/build/macos/Build/Products/Debug/Metro Sound.app\")",
+      "Bash(pkill -f \"Metro Sound\")",
+      "Bash(gh auth *)"
+    ]
+  }
+}
