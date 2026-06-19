@@ -14,6 +14,7 @@ class Track {
   int beatsPerBar;
   bool metronomeOn;
   int syncOffsetMs; // manual metronome-vs-music alignment
+  double speed; // playback speed multiplier for music + metronome (1.0 = normal)
 
   // Whether the learner has marked this lesson as done.
   bool done;
@@ -31,6 +32,7 @@ class Track {
     this.beatsPerBar = 4,
     this.metronomeOn = false,
     this.syncOffsetMs = 0,
+    this.speed = 1.0,
     this.done = false,
     List<String>? photoPaths,
   }) : photoPaths = photoPaths ?? [];
@@ -62,6 +64,7 @@ class Track {
         'beatsPerBar': beatsPerBar,
         'metronomeOn': metronomeOn,
         'syncOffsetMs': syncOffsetMs,
+        'speed': speed,
         'done': done,
         'photoPaths': photoPaths,
       };
@@ -76,6 +79,7 @@ class Track {
         beatsPerBar: (j['beatsPerBar'] as num?)?.toInt() ?? 4,
         metronomeOn: j['metronomeOn'] as bool? ?? false,
         syncOffsetMs: (j['syncOffsetMs'] as num?)?.toInt() ?? 0,
+        speed: (j['speed'] as num?)?.toDouble() ?? 1.0,
         done: j['done'] as bool? ?? false,
         photoPaths:
             (j['photoPaths'] as List?)?.map((e) => e as String).toList() ?? [],

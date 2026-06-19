@@ -6,6 +6,7 @@ import 'services/drive_sync.dart';
 import 'services/library_store.dart';
 import 'services/metronome.dart';
 import 'screens/books_screen.dart';
+import 'ui/studio.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,20 +46,8 @@ class MetroSoundApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Metro Sound',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF6750A4),
-            brightness: Brightness.light,
-          ),
-          useMaterial3: true,
-        ),
-        darkTheme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF6750A4),
-            brightness: Brightness.dark,
-          ),
-          useMaterial3: true,
-        ),
+        theme: studioTheme(),
+        themeMode: ThemeMode.dark,
         home: const BooksScreen(),
       ),
     );

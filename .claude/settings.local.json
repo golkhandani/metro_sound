@@ -18,7 +18,30 @@
       "Bash(pkill -f \"metro_sound\\\\|Metro Sound\")",
       "Bash(open \"/Users/mrzg/Work/metro_sound/build/macos/Build/Products/Debug/Metro Sound.app\")",
       "Bash(pkill -f \"Metro Sound\")",
-      "Bash(gh auth *)"
+      "Bash(gh auth *)",
+      "Bash(screencapture -o -x /tmp/metro_cupertino.png)",
+      "Bash(ls -la /tmp/metro_cupertino.png)",
+      "WebSearch",
+      "Bash(\"/Users/mrzg/Work/metro_sound/build/macos/Build/Products/Debug/Metro Sound.app/Contents/MacOS/Metro Sound\")",
+      "Bash(screencapture -o -x /tmp/studio.png)",
+      "Bash(ls -la /tmp/studio.png)",
+      "Bash(screencapture -o -x /tmp/studio2.png)",
+      "Bash(system_profiler SPUSBDataType)",
+      "Bash(xcrun xctrace *)",
+      "Bash(xcrun devicectl *)",
+      "Read(//Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/DeviceSupport/**)",
+      "Bash(xcodebuild -showsdks)",
+      "Bash(xip --expand /Users/mrzg/Downloads/Xcode_27_beta.xip)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(mv /Users/mrzg/Downloads/Xcode-beta.app /Applications/)",
+      "Read(//Applications/**)",
+      "Bash(sed -i '' 's/MACOSX_DEPLOYMENT_TARGET = 10.15;/MACOSX_DEPLOYMENT_TARGET = 12.0;/g' macos/Runner.xcodeproj/project.pbxproj)",
+      "Bash(sed -i '' \"s/platform :osx, '10.15'/platform :osx, '12.0'/g; s/platform :osx, '10.14'/platform :osx, '12.0'/g\" macos/Podfile)",
+      "Bash(python3 -c \"import PIL; print\\('Pillow', PIL.__version__\\)\")",
+      "Bash(rsvg-convert -w 1024 -h 1024 icon_fullbleed.svg -o icon_ios.png)",
+      "Bash(rsvg-convert -w 1024 -h 1024 icon_macos.svg -o icon_macos.png)",
+      "Bash(open \"/Users/mrzg/Work/metro_sound/build/macos/Build/Products/Release/Metro Sound.app\")",
+      "Bash(screencapture -o -x /tmp/release.png)"
     ]
   }
 }

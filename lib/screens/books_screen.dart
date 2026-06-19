@@ -6,63 +6,62 @@ import 'package:provider/provider.dart';
 
 import '../models/book.dart';
 import '../services/library_store.dart';
+import '../ui/studio.dart';
 import 'book_screen.dart';
 import 'settings_screen.dart';
 
-/// Home screen: a folder-style list of books. Tap a book to see its tracks.
 class BooksScreen extends StatelessWidget {
   const BooksScreen({super.key});
 
   Future<void> _createBook(BuildContext context) async {
     final library = context.read<LibraryStore>();
-    final title = await _promptForName(context, title: 'New book');
-    if (title == null) return;
+    final title = await studioPrompt(context,
+        title: 'New Book', hint: 'e.g. Ketab-e Aval — Tār');
+    if (title == null || title.trim().isEmpty) return;
     final book = await library.createBook(title);
     if (context.mounted) {
       Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => BookScreen(book: book)),
-      );
+          MaterialPageRoute(builder: (_) => BookScreen(book: book)));
     }
-  }
-
-  Future<void> _renameBook(BuildContext context, Book book) async {
-    final library = context.read<LibraryStore>();
-    final title =
-        await _promptForName(context, title: 'Rename book', initial: book.title);
-    if (title != null) await library.renameBook(book, title);
   }
 
   Future<void> _setCover(BuildContext context, Book book) async {
     final library = context.read<LibraryStore>();
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.image,
-    );
+    final result = await FilePicker.platform.pickFiles(type: FileType.image);
     final path =
         (result != null && result.files.isNotEmpty) ? result.files.first.path : null;
     if (path != null) await library.setBookCover(book, path);
   }
 
-  Future<void> _confirmDelete(BuildContext context, Book book) async {
+  void _menu(BuildContext context, Book book) {
     final library = context.read<LibraryStore>();
-    final count = library.trackCount(book.id);
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Delete "${book.title}"?'),
-        content: Text(count == 0
-            ? 'This book is empty.'
-            : 'This will delete the book and its $count track(s).'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
-          FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Delete')),
-        ],
-      ),
-    );
-    if (ok == true) await library.deleteBook(book);
+    final hasCover =
+        book.coverPath != null && File(book.coverPath!).existsSync();
+    showStudioMenu(context, title: book.title, actions: [
+      StudioMenuAction('Rename',
+          icon: Icons.edit_outlined, onTap: () async {
+        final t = await studioPrompt(context,
+            title: 'Rename Book', initial: book.title);
+        if (t != null) await library.renameBook(book, t);
+      }),
+      StudioMenuAction(hasCover ? 'Change cover' : 'Add cover',
+          icon: Icons.image_outlined, onTap: () => _setCover(context, book)),
+      if (hasCover)
+        StudioMenuAction('Remove cover',
+            icon: Icons.hide_image_outlined,
+            onTap: () => library.removeBookCover(book)),
+      StudioMenuAction('Delete',
+          icon: Icons.delete_outline,
+          destructive: true, onTap: () async {
+        final n = library.trackCount(book.id);
+        final ok = await studioConfirm(context,
+            title: 'Delete "${book.title}"?',
+            message: n == 0 ? 'This book is empty.' : 'Deletes $n track(s).',
+            confirmLabel: 'Delete',
+            destructive: true);
+        if (ok) await library.deleteBook(book);
+      }),
+    ]);
   }
 
   @override
@@ -70,55 +69,44 @@ class BooksScreen extends StatelessWidget {
     final library = context.watch<LibraryStore>();
     final books = library.books;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Practice Books'),
-        actions: [
-          IconButton(
-            tooltip: 'Settings & Drive sync',
-            icon: const Icon(Icons.settings),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const SettingsScreen()),
-            ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _createBook(context),
-        icon: const Icon(Icons.create_new_folder),
-        label: const Text('New book'),
-      ),
+    return StudioScaffold(
+      title: 'Metro Sound',
+      subtitle: 'Practice Library',
+      actions: [
+        StudioIconButton(
+            icon: Icons.add,
+            tooltip: 'New book',
+            onTap: () => _createBook(context)),
+        StudioIconButton(
+            icon: Icons.settings_outlined,
+            tooltip: 'Settings',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => const SettingsScreen()))),
+      ],
       body: !library.ready
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: CircularProgressIndicator(color: Studio.amber))
           : books.isEmpty
-              ? _EmptyState(onCreate: () => _createBook(context))
+              ? _Empty(onCreate: () => _createBook(context))
               : GridView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+                  padding: const EdgeInsets.all(16),
                   gridDelegate:
                       const SliverGridDelegateWithMaxCrossAxisExtent(
                     maxCrossAxisExtent: 180,
-                    mainAxisSpacing: 18,
-                    crossAxisSpacing: 18,
-                    // Portrait, book-cover proportions (cover ~2:3 plus the
-                    // title/count strip below).
-                    childAspectRatio: 0.56,
+                    mainAxisSpacing: 16,
+                    crossAxisSpacing: 16,
+                    childAspectRatio: 0.6,
                   ),
                   itemCount: books.length,
                   itemBuilder: (context, i) {
                     final book = books[i];
-                    return _BookCard(
+                    return _BookTile(
                       book: book,
                       total: library.trackCount(book.id),
                       done: library.doneCount(book.id),
-                      onOpen: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                            builder: (_) => BookScreen(book: book)),
-                      ),
-                      onRename: () => _renameBook(context, book),
-                      onSetCover: () => _setCover(context, book),
-                      onRemoveCover: () =>
-                          context.read<LibraryStore>().removeBookCover(book),
-                      onDelete: () => _confirmDelete(context, book),
+                      onOpen: () => Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => BookScreen(book: book))),
+                      onMenu: () => _menu(context, book),
                     );
                   },
                 ),
@@ -126,148 +114,85 @@ class BooksScreen extends StatelessWidget {
   }
 }
 
-class _BookCard extends StatelessWidget {
+class _BookTile extends StatelessWidget {
   final Book book;
   final int total;
   final int done;
   final VoidCallback onOpen;
-  final VoidCallback onRename;
-  final VoidCallback onSetCover;
-  final VoidCallback onRemoveCover;
-  final VoidCallback onDelete;
-
-  const _BookCard({
+  final VoidCallback onMenu;
+  const _BookTile({
     required this.book,
     required this.total,
     required this.done,
     required this.onOpen,
-    required this.onRename,
-    required this.onSetCover,
-    required this.onRemoveCover,
-    required this.onDelete,
+    required this.onMenu,
   });
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final hasCover = book.coverPath != null && File(book.coverPath!).existsSync();
-
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      elevation: 1,
-      child: InkWell(
-        onTap: onOpen,
+    return GestureDetector(
+      onTap: onOpen,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Cover area
             Expanded(
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  if (hasCover)
-                    Image.file(File(book.coverPath!), fit: BoxFit.cover)
-                  else
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [cs.primaryContainer, cs.secondaryContainer],
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Studio.line),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (hasCover)
+                      Image.file(File(book.coverPath!), fit: BoxFit.cover)
+                    else
+                      Container(
+                        color: Studio.surfaceHigh,
+                        child: const Center(
+                          child: Icon(Icons.album_outlined,
+                              size: 44, color: Studio.textDim),
                         ),
                       ),
-                      child: Icon(Icons.library_music,
-                          size: 56,
-                          color: cs.onPrimaryContainer.withValues(alpha: 0.7)),
-                    ),
-                  // Menu button, top-right
-                  Positioned(
-                    top: 2,
-                    right: 2,
-                    child: Material(
-                      color: Colors.black.withValues(alpha: 0.35),
-                      shape: const CircleBorder(),
-                      child: PopupMenuButton<String>(
-                        icon: const Icon(Icons.more_vert,
-                            color: Colors.white, size: 20),
-                        onSelected: (v) {
-                          switch (v) {
-                            case 'rename':
-                              onRename();
-                            case 'cover':
-                              onSetCover();
-                            case 'removeCover':
-                              onRemoveCover();
-                            case 'delete':
-                              onDelete();
-                          }
-                        },
-                        itemBuilder: (_) => [
-                          const PopupMenuItem(
-                              value: 'rename', child: Text('Rename')),
-                          PopupMenuItem(
-                              value: 'cover',
-                              child: Text(hasCover
-                                  ? 'Change cover photo'
-                                  : 'Add cover photo')),
-                          if (hasCover)
-                            const PopupMenuItem(
-                                value: 'removeCover',
-                                child: Text('Remove cover')),
-                          const PopupMenuItem(
-                              value: 'delete', child: Text('Delete')),
-                        ],
-                      ),
-                    ),
-                  ),
-                  // Progress badge, bottom-left
-                  if (total > 0)
                     Positioned(
-                      left: 8,
-                      bottom: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.55),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          '$done / $total done',
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 11),
+                      top: 4,
+                      right: 4,
+                      child: StudioIconButton(
+                          icon: Icons.more_horiz,
+                          size: 18,
+                          color: Studio.textPrimary,
+                          onTap: onMenu),
+                    ),
+                    if (total > 0)
+                      Positioned(
+                        left: 8,
+                        bottom: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Studio.bg.withValues(alpha: 0.8),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Studio.line),
+                          ),
+                          child: Text('$done/$total',
+                              style: Studio.numeric(11, color: Studio.amber)),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
-            // Title + count
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    book.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleSmall
-                        ?.copyWith(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    total == 0 ? 'Empty' : '$total track(s)',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: cs.outline),
-                  ),
-                ],
-              ),
-            ),
+            const SizedBox(height: 8),
+            Text(book.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Studio.title.copyWith(fontSize: 13)),
+            Text(total == 0 ? 'Empty' : '$total tracks', style: Studio.bodyDim),
           ],
         ),
       ),
@@ -275,35 +200,9 @@ class _BookCard extends StatelessWidget {
   }
 }
 
-Future<String?> _promptForName(BuildContext context,
-    {required String title, String initial = ''}) {
-  final controller = TextEditingController(text: initial);
-  return showDialog<String>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: Text(title),
-      content: TextField(
-        controller: controller,
-        autofocus: true,
-        decoration: const InputDecoration(
-          hintText: 'e.g. Ketab-e Aval — Tār',
-        ),
-        onSubmitted: (v) => Navigator.pop(ctx, v),
-      ),
-      actions: [
-        TextButton(
-            onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-        FilledButton(
-            onPressed: () => Navigator.pop(ctx, controller.text),
-            child: const Text('Save')),
-      ],
-    ),
-  );
-}
-
-class _EmptyState extends StatelessWidget {
+class _Empty extends StatelessWidget {
   final VoidCallback onCreate;
-  const _EmptyState({required this.onCreate});
+  const _Empty({required this.onCreate});
 
   @override
   Widget build(BuildContext context) {
@@ -311,19 +210,16 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.folder_open,
-              size: 72, color: Theme.of(context).colorScheme.outline),
+          const Icon(Icons.library_music_outlined,
+              size: 64, color: Studio.textDim),
           const SizedBox(height: 16),
-          Text('No books yet',
-              style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          const Text('Create a book, then import its practice tracks.'),
+          const Text('No books yet', style: Studio.title),
+          const SizedBox(height: 6),
+          const Text('Create a book, then import its practice tracks.',
+              style: Studio.bodyDim),
           const SizedBox(height: 20),
-          FilledButton.icon(
-            onPressed: onCreate,
-            icon: const Icon(Icons.create_new_folder),
-            label: const Text('New book'),
-          ),
+          StudioButton(
+              label: 'New Book', icon: Icons.add, onTap: onCreate),
         ],
       ),
     );

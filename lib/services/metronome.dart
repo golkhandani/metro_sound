@@ -45,6 +45,14 @@ class Metronome extends ChangeNotifier {
   bool _running = false;
   bool get running => _running;
 
+  bool _paused = false;
+  bool get paused => _paused;
+
+  // Playback speed multiplier (1.0 = normal). Scales the click rate so it stays
+  // locked to the sped-up/slowed music.
+  double _speed = 1.0;
+  double get speed => _speed;
+
   int _currentBeat = 0;
   int get currentBeat => _currentBeat;
 
@@ -71,24 +79,66 @@ class Metronome extends ChangeNotifier {
   void start() {
     if (_running) return;
     _running = true;
+    _beginFromDownbeat();
+    notifyListeners();
+  }
+
+  /// Re-lock to beat 1 (downbeat) — used when the track loops back to the start
+  /// so the click re-aligns with the music's restart.
+  void restartFromDownbeat() {
+    if (!_running) return;
+    _beginFromDownbeat();
+    notifyListeners();
+  }
+
+  /// Microseconds between beats at the current tempo and speed.
+  int _intervalUs() => (60000000 / (_bpm * _speed)).round();
+
+  void _beginFromDownbeat() {
+    _paused = false;
     _currentBeat = -1;
+    _timer?.cancel();
     _sw
       ..reset()
       ..start();
     // Apply the sync offset to the first beat's timing. A negative offset is
     // wrapped forward by one beat so we never schedule in the past.
-    final intervalUs = (60000000 / _bpm).round();
+    final intervalUs = _intervalUs();
     int firstUs = _syncOffsetMs * 1000;
     while (firstUs < 0) {
       firstUs += intervalUs;
     }
     _nextBeatUs = firstUs;
     _timer = Timer(Duration(microseconds: firstUs), _tick);
+  }
+
+  /// Freeze the click at its exact current phase (used when the music pauses).
+  /// Resuming continues from the same beat position so they stay in sync.
+  void pause() {
+    if (!_running || _paused) return;
+    _paused = true;
+    _timer?.cancel();
+    _timer = null;
+    _sw.stop(); // freeze elapsed time — preserves how far we are into the beat
+    notifyListeners();
+  }
+
+  /// Continue from the frozen phase set by [pause].
+  void resume() {
+    if (!_running || !_paused) return;
+    _paused = false;
+    _sw.start(); // elapsed time continues from where it froze
+    final delayUs = _nextBeatUs - _sw.elapsedMicroseconds;
+    _timer = Timer(
+      Duration(microseconds: delayUs < 0 ? 0 : delayUs),
+      _tick,
+    );
     notifyListeners();
   }
 
   void stop() {
     _running = false;
+    _paused = false;
     _timer?.cancel();
     _timer = null;
     _sw.stop();
@@ -102,7 +152,7 @@ class Metronome extends ChangeNotifier {
     _currentBeat = (_currentBeat + 1) % _beatsPerBar;
     _fireBeat(_currentBeat);
 
-    _nextBeatUs += (60000000 / _bpm).round();
+    _nextBeatUs += _intervalUs();
     final delayUs = _nextBeatUs - _sw.elapsedMicroseconds;
     _timer = Timer(
       Duration(microseconds: delayUs < 0 ? 0 : delayUs),
@@ -162,17 +212,32 @@ class Metronome extends ChangeNotifier {
     _syncOffsetMs = clamped;
     if (_running) {
       _nextBeatUs += deltaUs;
-      _timer?.cancel();
-      final delayUs = _nextBeatUs - _sw.elapsedMicroseconds;
-      _timer = Timer(
-        Duration(microseconds: delayUs < 0 ? 0 : delayUs),
-        _tick,
-      );
+      // Only reschedule the ticking timer when actively running (not paused).
+      if (!_paused) {
+        _timer?.cancel();
+        final delayUs = _nextBeatUs - _sw.elapsedMicroseconds;
+        _timer = Timer(
+          Duration(microseconds: delayUs < 0 ? 0 : delayUs),
+          _tick,
+        );
+      }
     }
     notifyListeners();
   }
 
   void nudgeSyncOffset(int deltaMs) => setSyncOffset(_syncOffsetMs + deltaMs);
+
+  /// Set the playback-speed multiplier. While running, re-locks to the downbeat
+  /// so the new tempo applies cleanly.
+  void setSpeed(double value) {
+    final v = value <= 0 ? 1.0 : value;
+    if (v == _speed) return;
+    _speed = v;
+    if (_running && !_paused) {
+      _beginFromDownbeat();
+    }
+    notifyListeners();
+  }
 
   Future<void> _applyVolume() async {
     // Volume is also passed per-play in _fireBeat; this keeps any currently

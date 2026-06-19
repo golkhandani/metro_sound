@@ -6,17 +6,15 @@ import 'package:provider/provider.dart';
 
 import '../models/track.dart';
 import '../services/library_store.dart';
+import '../ui/studio.dart';
 
 /// Full-screen, zoomable, swipeable viewer for a track's practice photos.
 /// Audio + metronome keep playing underneath (this is pushed over the player).
 class PhotoViewerScreen extends StatefulWidget {
   final Track track;
   final int initialIndex;
-  const PhotoViewerScreen({
-    super.key,
-    required this.track,
-    this.initialIndex = 0,
-  });
+  const PhotoViewerScreen(
+      {super.key, required this.track, this.initialIndex = 0});
 
   @override
   State<PhotoViewerScreen> createState() => _PhotoViewerScreenState();
@@ -39,7 +37,7 @@ class _PhotoViewerScreenState extends State<PhotoViewerScreen> {
     super.dispose();
   }
 
-  Future<void> _addPhoto() async {
+  Future<void> _add() async {
     final library = context.read<LibraryStore>();
     final result = await FilePicker.platform.pickFiles(type: FileType.image);
     if (result != null && result.files.isNotEmpty) {
@@ -48,71 +46,47 @@ class _PhotoViewerScreenState extends State<PhotoViewerScreen> {
     }
   }
 
-  Future<void> _deleteCurrent(List<String> photos) async {
+  Future<void> _delete(List<String> photos) async {
     if (photos.isEmpty) return;
-    final library = context.read<LibraryStore>();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete this photo?'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
-          FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Delete')),
-        ],
-      ),
-    );
-    if (ok == true) {
-      await library.removePhoto(widget.track, photos[_index]);
+    final ok = await studioConfirm(context,
+        title: 'Delete this photo?', confirmLabel: 'Delete', destructive: true);
+    if (ok && mounted) {
+      await context.read<LibraryStore>().removePhoto(widget.track, photos[_index]);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    context.watch<LibraryStore>(); // rebuild when photos change
+    context.watch<LibraryStore>();
     final photos = widget.track.photoPaths;
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        title: Text(photos.isEmpty
-            ? widget.track.title
-            : '${widget.track.title}  ·  ${_index + 1}/${photos.length}'),
-        actions: [
-          IconButton(
-            tooltip: 'Add photo',
-            onPressed: _addPhoto,
-            icon: const Icon(Icons.add_a_photo),
-          ),
-          if (photos.isNotEmpty)
-            IconButton(
+    return StudioScaffold(
+      title: widget.track.title,
+      subtitle: photos.isEmpty ? null : '${_index + 1} / ${photos.length}',
+      showBack: true,
+      actions: [
+        StudioIconButton(
+            icon: Icons.add_a_photo_outlined, tooltip: 'Add photo', onTap: _add),
+        if (photos.isNotEmpty)
+          StudioIconButton(
+              icon: Icons.delete_outline,
               tooltip: 'Delete photo',
-              onPressed: () => _deleteCurrent(photos),
-              icon: const Icon(Icons.delete_outline),
-            ),
-        ],
-      ),
+              onTap: () => _delete(photos)),
+      ],
       body: photos.isEmpty
           ? Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.photo_library_outlined,
-                      size: 72, color: Colors.white38),
+                      size: 64, color: Studio.textDim),
                   const SizedBox(height: 16),
-                  const Text('No photos yet',
-                      style: TextStyle(color: Colors.white70)),
+                  const Text('No photos yet', style: Studio.bodyDim),
                   const SizedBox(height: 16),
-                  FilledButton.icon(
-                    onPressed: _addPhoto,
-                    icon: const Icon(Icons.add_a_photo),
-                    label: const Text('Add photo'),
-                  ),
+                  StudioButton(
+                      label: 'Add Photo',
+                      icon: Icons.add_a_photo_outlined,
+                      onTap: _add),
                 ],
               ),
             )
@@ -120,15 +94,12 @@ class _PhotoViewerScreenState extends State<PhotoViewerScreen> {
               controller: _controller,
               itemCount: photos.length,
               onPageChanged: (i) => setState(() => _index = i),
-              itemBuilder: (context, i) {
-                return InteractiveViewer(
-                  minScale: 1,
-                  maxScale: 5,
-                  child: Center(
-                    child: Image.file(File(photos[i]), fit: BoxFit.contain),
-                  ),
-                );
-              },
+              itemBuilder: (context, i) => InteractiveViewer(
+                minScale: 1,
+                maxScale: 5,
+                child: Center(
+                    child: Image.file(File(photos[i]), fit: BoxFit.contain)),
+              ),
             ),
     );
   }

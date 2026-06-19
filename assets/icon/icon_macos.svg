@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1A1A22"/>
+      <stop offset="1" stop-color="#0A0A0C"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.40" r="0.55">
+      <stop offset="0" stop-color="#FFB020" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#FFB020" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFD479"/>
+      <stop offset="1" stop-color="#F5A623"/>
+    </linearGradient>
+  </defs>
+
+  <!-- rounded macOS tile with transparent corners -->
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)"/>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#glow)"/>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="none"
+        stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="2"/>
+
+  <!-- metronome body: amber frame -->
+  <path d="M412 286
+           L612 286
+           Q631 286 636 305
+           L716 754
+           Q721 784 690 784
+           L334 784
+           Q303 784 308 754
+           L388 305
+           Q393 286 412 286 Z"
+        fill="url(#amber)"/>
+
+  <!-- inner face (dark) -->
+  <path d="M456 352
+           L568 352
+           L626 706
+           Q630 728 608 728
+           L416 728
+           Q394 728 398 706 Z"
+        fill="#0E0E13"/>
+
+  <!-- scale ticks -->
+  <g fill="#F5A623" opacity="0.55">
+    <rect x="472" y="420" width="32" height="7" rx="3"/>
+    <rect x="478" y="488" width="40" height="7" rx="3"/>
+    <rect x="484" y="556" width="48" height="7" rx="3"/>
+    <rect x="490" y="624" width="56" height="7" rx="3"/>
+  </g>
+
+  <!-- pendulum arm + weight -->
+  <g transform="rotate(13 512 700)">
+    <rect x="501" y="378" width="22" height="328" rx="11" fill="url(#amber)"/>
+    <rect x="483" y="486" width="58" height="34" rx="9" fill="#FFD479"/>
+  </g>
+
+  <!-- pivot cap -->
+  <circle cx="512" cy="700" r="16" fill="#FFE0A0"/>
+
+  <!-- accent beat dot -->
+  <circle cx="512" cy="250" r="28" fill="url(#amber)"/>
+</svg>

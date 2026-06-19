@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1A1A22"/>
+      <stop offset="1" stop-color="#0A0A0C"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.40" r="0.55">
+      <stop offset="0" stop-color="#FFB020" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#FFB020" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFD479"/>
+      <stop offset="1" stop-color="#F5A623"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <rect width="1024" height="1024" fill="url(#glow)"/>
+
+  <!-- metronome body: amber frame -->
+  <path d="M408 252
+           L616 252
+           Q636 252 641 272
+           L726 760
+           Q731 792 698 792
+           L326 792
+           Q293 792 298 760
+           L383 272
+           Q388 252 408 252 Z"
+        fill="url(#amber)"/>
+
+  <!-- inner face (dark) -->
+  <path d="M454 322
+           L570 322
+           L632 706
+           Q636 730 612 730
+           L412 730
+           Q388 730 392 706 Z"
+        fill="#0E0E13"/>
+
+  <!-- scale ticks on the face -->
+  <g fill="#F5A623" opacity="0.55">
+    <rect x="470" y="396" width="34" height="7" rx="3"/>
+    <rect x="476" y="470" width="42" height="7" rx="3"/>
+    <rect x="482" y="544" width="50" height="7" rx="3"/>
+    <rect x="488" y="618" width="58" height="7" rx="3"/>
+  </g>
+
+  <!-- pendulum arm + weight (tilted) -->
+  <g transform="rotate(13 512 700)">
+    <rect x="500" y="360" width="24" height="346" rx="12" fill="url(#amber)"/>
+    <rect x="481" y="476" width="62" height="36" rx="9" fill="#FFD479"/>
+  </g>
+
+  <!-- pivot cap -->
+  <circle cx="512" cy="700" r="17" fill="#FFE0A0"/>
+
+  <!-- accent beat dot -->
+  <circle cx="512" cy="206" r="30" fill="url(#amber)"/>
+</svg>

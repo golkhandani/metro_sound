@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 
@@ -19,10 +21,30 @@ class AudioController extends ChangeNotifier {
   bool _muted = false;
   bool get muted => _muted;
 
+  double _speed = 1.0;
+  double get speed => _speed;
+
+  // Fires when the current track wraps back to the start (loop repeat), so the
+  // metronome can re-lock to the downbeat and stay in sync.
+  final _loopController = StreamController<void>.broadcast();
+  Stream<void> get loopStream => _loopController.stream;
+  Duration _lastPos = Duration.zero;
+
   AudioController() {
     _player.playerStateStream.listen((_) => notifyListeners());
     // Repeat the current track until the user explicitly moves to another one.
     _player.setLoopMode(LoopMode.one);
+    // Detect the loop point: position jumps from near the end back to near 0.
+    _player.positionStream.listen((pos) {
+      final dur = _player.duration;
+      if (dur != null && dur > const Duration(seconds: 1) && _player.playing) {
+        const edge = Duration(milliseconds: 700);
+        if (_lastPos > dur - edge && pos < edge) {
+          _loopController.add(null);
+        }
+      }
+      _lastPos = pos;
+    });
   }
 
   bool get isPlaying => _player.playing;
@@ -47,6 +69,7 @@ class AudioController extends ChangeNotifier {
     try {
       await _player.setAudioSource(AudioSource.file(_queue[index].audioPath));
       await _applyVolume();
+      await _player.setSpeed(_speed);
       if (autoplay) await _player.play();
     } catch (e) {
       debugPrint('Audio open error: $e');
@@ -95,8 +118,15 @@ class AudioController extends ChangeNotifier {
 
   Future<void> _applyVolume() => _player.setVolume(_muted ? 0.0 : _volume);
 
+  Future<void> setSpeed(double value) async {
+    _speed = value <= 0 ? 1.0 : value;
+    await _player.setSpeed(_speed);
+    notifyListeners();
+  }
+
   @override
   void dispose() {
+    _loopController.close();
     _player.dispose();
     super.dispose();
   }
