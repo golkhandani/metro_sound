@@ -366,20 +366,17 @@ class _Stepper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Pressable(
       onTap: onTap,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: Studio.surfaceHigh,
-            shape: BoxShape.circle,
-            border: Border.all(color: Studio.line),
-          ),
-          child: Icon(icon, color: Studio.amber, size: 22),
+      child: Container(
+        width: 42,
+        height: 42,
+        decoration: BoxDecoration(
+          color: Studio.surfaceHigh,
+          shape: BoxShape.circle,
+          border: Border.all(color: Studio.line),
         ),
+        child: Icon(icon, color: Studio.amber, size: 22),
       ),
     );
   }
@@ -686,7 +683,10 @@ class _PlayButtonState extends State<_PlayButton>
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: widget.onTap,
+      onTap: () {
+        Haptics.impact();
+        widget.onTap();
+      },
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         child: AnimatedBuilder(

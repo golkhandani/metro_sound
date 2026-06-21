@@ -17,20 +17,8 @@ class TunerScreen extends StatefulWidget {
 }
 
 class _TunerScreenState extends State<TunerScreen> {
-  Tuner? _tuner;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _tuner = context.read<Tuner>();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _tuner?.start());
-  }
-
-  @override
-  void dispose() {
-    _tuner?.stop();
-    super.dispose();
-  }
+  // Mic start/stop is driven by RootShell when this tab is shown/hidden, so it
+  // doesn't run while other tabs are active.
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +37,7 @@ class _TunerScreenState extends State<TunerScreen> {
     return StudioScaffold(
       title: 'Tuner',
       subtitle: 'A = 440 Hz',
-      showBack: true,
+      showBack: false,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

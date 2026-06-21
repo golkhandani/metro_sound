@@ -58,7 +58,7 @@ class SettingsScreen extends StatelessWidget {
 
     return StudioScaffold(
       title: 'Settings',
-      showBack: true,
+      showBack: false,
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

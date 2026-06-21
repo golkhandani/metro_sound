@@ -48,7 +48,7 @@ class _MetronomeScreenState extends State<MetronomeScreen> {
     return StudioScaffold(
       title: 'Metronome',
       subtitle: m.timeSigLabel,
-      showBack: true,
+      showBack: false,
       actions: [
         Row(mainAxisSize: MainAxisSize.min, children: [
           Text('VISUAL', style: Studio.label.copyWith(fontSize: 10)),
@@ -119,20 +119,17 @@ class _Stepper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Pressable(
       onTap: onTap,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: Studio.surfaceHigh,
-            shape: BoxShape.circle,
-            border: Border.all(color: Studio.line),
-          ),
-          child: Icon(icon, color: Studio.amber, size: 24),
+      child: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: Studio.surfaceHigh,
+          shape: BoxShape.circle,
+          border: Border.all(color: Studio.line),
         ),
+        child: Icon(icon, color: Studio.amber, size: 24),
       ),
     );
   }
@@ -145,11 +142,12 @@ class _StartButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: Container(
+    return Pressable(
+      onTap: () {
+        Haptics.impact();
+        onTap();
+      },
+      child: Container(
           width: 96,
           height: 96,
           decoration: BoxDecoration(
@@ -167,7 +165,6 @@ class _StartButton extends StatelessWidget {
           child: Icon(running ? Icons.stop : Icons.play_arrow,
               color: running ? Studio.amber : Studio.bg, size: 46),
         ),
-      ),
     );
   }
 }

@@ -145,8 +145,14 @@ class _TrackRowState extends State<_TrackRow> {
       }),
       StudioMenuAction('Delete',
           icon: Icons.delete_outline,
-          destructive: true,
-          onTap: () => lib.deleteTrack(t)),
+          destructive: true, onTap: () async {
+        final ok = await studioConfirm(context,
+            title: 'Delete "${t.title}"?',
+            message: 'This removes the track and its audio from this device.',
+            confirmLabel: 'Delete',
+            destructive: true);
+        if (ok) lib.deleteTrack(t);
+      }),
     ]);
   }
 
@@ -162,7 +168,10 @@ class _TrackRowState extends State<_TrackRow> {
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
       child: GestureDetector(
-        onTap: widget.onOpen,
+        onTap: () {
+          Haptics.impact();
+          widget.onOpen();
+        },
         child: Container(
           margin: const EdgeInsets.only(bottom: 6),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -177,8 +186,9 @@ class _TrackRowState extends State<_TrackRow> {
           ),
           child: Row(
             children: [
-              // done / play indicator
-              GestureDetector(
+              // Done checkbox (hollow ring → filled amber check). Tapping the
+              // row plays; tapping this marks the lesson done.
+              Pressable(
                 onTap: () {
                   t.done = !t.done;
                   lib.updateTrack(t);
@@ -193,11 +203,9 @@ class _TrackRowState extends State<_TrackRow> {
                     border: Border.all(
                         color: t.done ? Studio.amber : Studio.line, width: 1.5),
                   ),
-                  child: Icon(
-                    t.done ? Icons.check : Icons.play_arrow_rounded,
-                    size: 17,
-                    color: t.done ? Studio.bg : Studio.textSecondary,
-                  ),
+                  child: t.done
+                      ? const Icon(Icons.check, size: 17, color: Studio.bg)
+                      : null,
                 ),
               ),
               const SizedBox(width: 12),

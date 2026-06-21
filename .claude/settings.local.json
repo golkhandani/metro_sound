@@ -44,7 +44,9 @@
       "Bash(screencapture -o -x /tmp/release.png)",
       "mcp__claude_ai_Google_Drive__search_files",
       "mcp__claude_ai_Google_Drive__get_file_metadata",
-      "Bash(flutter build *)"
+      "Bash(flutter build *)",
+      "Bash(screencapture -o -x /tmp/audit_home.png)",
+      "Bash(ls -la /tmp/audit_home.png)"
     ]
   }
 }

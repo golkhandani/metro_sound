@@ -7,7 +7,7 @@ import 'services/library_store.dart';
 import 'services/metronome.dart';
 import 'services/settings.dart';
 import 'services/tuner.dart';
-import 'screens/books_screen.dart';
+import 'screens/root_shell.dart';
 import 'ui/studio.dart';
 
 Future<void> main() async {
@@ -57,7 +57,7 @@ class MetroSoundApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: studioTheme(),
         themeMode: ThemeMode.dark,
-        home: const BooksScreen(),
+        home: const RootShell(),
       ),
     );
   }

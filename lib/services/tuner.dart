@@ -2,6 +2,7 @@ import 'dart:io' show Platform;
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_audio_capture/flutter_audio_capture.dart';
 import 'package:pitch_detector_dart/pitch_detector.dart';
 
@@ -23,6 +24,7 @@ class Tuner extends ChangeNotifier {
   final List<double> _buf = [];
   bool _processing = false;
   bool _inited = false;
+  bool _wasInTune = false;
 
   // 12 = semitones, 24 = Persian quarter-tones (set from settings).
   int _divisions = 12;
@@ -140,6 +142,10 @@ class Tuner extends ChangeNotifier {
         _cents = ((stepF - nearest) * centsPerDiv).round();
         _noteIndex = nearest % divs;
         _octave = (nearest ~/ divs) - 1;
+        // Light haptic the moment the note locks into tune.
+        final nowInTune = _cents.abs() <= 5;
+        if (nowInTune && !_wasInTune) HapticFeedback.lightImpact();
+        _wasInTune = nowInTune;
         _pitched = true;
         _hasReading = true;
         _needle += (_cents - _needle) * 0.35;

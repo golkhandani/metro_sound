@@ -1,4 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+/// Light tactile feedback (no-op where unsupported).
+class Haptics {
+  static void tap() => HapticFeedback.selectionClick();
+  static void impact() => HapticFeedback.lightImpact();
+}
 
 /// "Dark Studio" — a bespoke pro-audio design system. Near-black surfaces,
 /// amber accent, monospace numeric readouts, fader-style controls. Used on
@@ -242,7 +249,7 @@ class StudioCard extends StatelessWidget {
       child: child,
     );
     if (onTap == null) return card;
-    return _Pressable(onTap: onTap!, child: card);
+    return Pressable(onTap: onTap!, child: card);
   }
 }
 
@@ -394,7 +401,7 @@ class StudioButton extends StatelessWidget {
     }
     return Opacity(
       opacity: disabled ? 0.4 : 1,
-      child: _Pressable(
+      child: Pressable(
         onTap: onTap ?? () {},
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -441,7 +448,7 @@ class StudioIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final btn = _Pressable(
+    final btn = Pressable(
       onTap: onTap ?? () {},
       child: Opacity(
         opacity: onTap == null ? 0.35 : 1,
@@ -480,7 +487,7 @@ class StudioSegmented<T> extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           for (final (value, label) in options)
-            _Pressable(
+            Pressable(
               onTap: () => onChanged(value),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 120),
@@ -511,7 +518,7 @@ class StudioSwitch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _Pressable(
+    return Pressable(
       onTap: () => onChanged(!value),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
@@ -541,16 +548,19 @@ class StudioSwitch extends StatelessWidget {
 }
 
 /// Lightweight press-scale feedback without Material ink.
-class _Pressable extends StatefulWidget {
+/// Tap target with press-scale feedback + light haptic. Reusable everywhere.
+class Pressable extends StatefulWidget {
   final Widget child;
   final VoidCallback onTap;
-  const _Pressable({required this.child, required this.onTap});
+  final bool haptic;
+  const Pressable(
+      {super.key, required this.child, required this.onTap, this.haptic = true});
 
   @override
-  State<_Pressable> createState() => _PressableState();
+  State<Pressable> createState() => PressableState();
 }
 
-class _PressableState extends State<_Pressable> {
+class PressableState extends State<Pressable> {
   bool _down = false;
   @override
   Widget build(BuildContext context) {
@@ -560,7 +570,10 @@ class _PressableState extends State<_Pressable> {
         onTapDown: (_) => setState(() => _down = true),
         onTapUp: (_) => setState(() => _down = false),
         onTapCancel: () => setState(() => _down = false),
-        onTap: widget.onTap,
+        onTap: () {
+          if (widget.haptic) Haptics.tap();
+          widget.onTap();
+        },
         child: AnimatedScale(
           scale: _down ? 0.96 : 1,
           duration: const Duration(milliseconds: 90),
@@ -618,7 +631,7 @@ Future<void> showStudioMenu(BuildContext context,
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     for (final a in actions)
-                      _Pressable(
+                      Pressable(
                         onTap: () {
                           Navigator.pop(ctx);
                           a.onTap();
