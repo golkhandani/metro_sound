@@ -8,18 +8,48 @@ import '../ui/studio.dart';
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
+  Future<void> _backup(BuildContext context) async {
+    final drive = context.read<DriveSyncService>();
+    final lib = context.read<LibraryStore>();
+    final folders = await drive.listFolders();
+    if (!context.mounted) return;
+    showStudioMenu(context, title: 'Back up to…', actions: [
+      StudioMenuAction('New folder…', icon: Icons.create_new_folder_outlined,
+          onTap: () async {
+        final name = await studioPrompt(context,
+            title: 'New backup folder', hint: 'Folder name');
+        if (name != null && name.trim().isNotEmpty) {
+          await drive.backup(lib, folderName: name.trim());
+        }
+      }),
+      for (final f in folders)
+        StudioMenuAction(f.name,
+            icon: Icons.folder_outlined,
+            onTap: () => drive.backup(lib, folderId: f.id)),
+    ]);
+  }
+
   Future<void> _load(BuildContext context) async {
-    final ok = await studioConfirm(context,
-        title: 'Load catalog from Drive?',
-        message:
-            'Replaces your local catalog with the one in Drive. Books and '
-            'tracks not in Drive will be removed from this device.',
-        confirmLabel: 'Load');
-    if (ok && context.mounted) {
-      await context
-          .read<DriveSyncService>()
-          .loadCatalog(context.read<LibraryStore>());
+    final drive = context.read<DriveSyncService>();
+    final lib = context.read<LibraryStore>();
+    final folders = await drive.listFolders();
+    if (!context.mounted) return;
+    if (folders.isEmpty) {
+      showToast(context, 'No backup folders found in Drive');
+      return;
     }
+    showStudioMenu(context, title: 'Load from…', actions: [
+      for (final f in folders)
+        StudioMenuAction(f.name, icon: Icons.folder_outlined, onTap: () async {
+          final ok = await studioConfirm(context,
+              title: 'Load "${f.name}"?',
+              message:
+                  'Replaces your local catalog with this backup. Books and '
+                  'tracks not in it will be removed from this device.',
+              confirmLabel: 'Load');
+          if (ok) await drive.loadCatalog(lib, folderId: f.id);
+        }),
+    ]);
   }
 
   @override
@@ -94,7 +124,7 @@ class SettingsScreen extends StatelessWidget {
                         label: 'Back up to Drive',
                         icon: Icons.cloud_upload_outlined,
                         onTap: (drive.isConnected && !drive.busy)
-                            ? () => drive.backup(context.read<LibraryStore>())
+                            ? () => _backup(context)
                             : null,
                       ),
                       StudioButton(

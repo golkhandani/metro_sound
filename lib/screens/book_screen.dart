@@ -225,7 +225,8 @@ class _TrackRowState extends State<_TrackRow> {
                     Row(children: [
                       Text('${t.bpm} BPM',
                           style: Studio.numeric(11, color: Studio.textSecondary)),
-                      Text('  ·  ${t.beatsPerBar}/4', style: Studio.bodyDim),
+                      Text('  ·  ${t.beatsPerBar}/${t.timeSigDenominator}',
+                          style: Studio.bodyDim),
                       if (t.photoPaths.isNotEmpty)
                         Text('  ·  ${t.photoPaths.length} 📷',
                             style: Studio.bodyDim),

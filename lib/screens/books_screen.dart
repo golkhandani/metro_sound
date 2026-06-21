@@ -8,7 +8,9 @@ import '../models/book.dart';
 import '../services/library_store.dart';
 import '../ui/studio.dart';
 import 'book_screen.dart';
+import 'metronome_screen.dart';
 import 'settings_screen.dart';
+import 'tuner_screen.dart';
 
 class BooksScreen extends StatelessWidget {
   const BooksScreen({super.key});
@@ -73,6 +75,16 @@ class BooksScreen extends StatelessWidget {
       title: 'Metro Sound',
       subtitle: 'Practice Library',
       actions: [
+        StudioIconButton(
+            icon: Icons.av_timer,
+            tooltip: 'Metronome',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => const MetronomeScreen()))),
+        StudioIconButton(
+            icon: Icons.graphic_eq,
+            tooltip: 'Tuner',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => const TunerScreen()))),
         StudioIconButton(
             icon: Icons.add,
             tooltip: 'New book',

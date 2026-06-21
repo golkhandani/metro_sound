@@ -51,7 +51,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _loadedPreset = t;
     final m = context.read<Metronome>();
     m.setBpm(t.bpm);
-    m.setBeatsPerBar(t.beatsPerBar);
+    m.setTimeSignature(t.beatsPerBar, t.timeSigDenominator);
     m.setSyncOffset(t.syncOffsetMs);
     m.setSpeed(t.speed);
     context.read<AudioController>().setSpeed(t.speed);
@@ -62,6 +62,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     final m = context.read<Metronome>();
     t.bpm = m.bpm;
     t.beatsPerBar = m.beatsPerBar;
+    t.timeSigDenominator = m.denominator;
     t.syncOffsetMs = m.syncOffsetMs;
     t.speed = context.read<AudioController>().speed;
     t.metronomeOn = m.running;
@@ -262,11 +263,17 @@ class _MetronomeCard extends StatelessWidget {
   final VoidCallback onChanged;
   const _MetronomeCard({required this.onChanged});
 
+  // (numerator, denominator) presets shown in the picker.
+  static const _timeSigs = [
+    (2, 4), (3, 4), (4, 4), (5, 4), (6, 4), (7, 4),
+    (2, 2), (3, 8), (5, 8), (6, 8), (7, 8), (9, 8), (12, 8),
+  ];
+
   void _timeSig(BuildContext context, Metronome m) {
     showStudioMenu(context, title: 'Time signature', actions: [
-      for (final b in const [2, 3, 4, 5, 6, 7])
-        StudioMenuAction('$b / 4', onTap: () {
-          m.setBeatsPerBar(b);
+      for (final (n, d) in _timeSigs)
+        StudioMenuAction('$n / $d', onTap: () {
+          m.setTimeSignature(n, d);
           onChanged();
         }),
     ]);
@@ -329,7 +336,7 @@ class _MetronomeCard extends StatelessWidget {
                   kind: StudioButtonKind.ghost,
                   onTap: m.tap),
               StudioButton(
-                  label: '${m.beatsPerBar}/4',
+                  label: m.timeSigLabel,
                   kind: StudioButtonKind.ghost,
                   onTap: () => _timeSig(context, m)),
               StudioButton(
@@ -599,25 +606,42 @@ class _Transport extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                StudioIconButton(
-                    icon: Icons.replay,
-                    tooltip: 'Restart both from the top',
-                    onTap: restart),
-                const SizedBox(width: 10),
-                StudioIconButton(
-                    icon: Icons.skip_previous, size: 28, onTap: audio.prev),
-                const SizedBox(width: 14),
+                // Left controls, pushed toward the centered play button.
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      StudioIconButton(
+                          icon: Icons.replay,
+                          tooltip: 'Restart both from the top',
+                          onTap: restart),
+                      const SizedBox(width: 10),
+                      StudioIconButton(
+                          icon: Icons.skip_previous,
+                          size: 28,
+                          onTap: audio.prev),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
                 _PlayButton(
                     playing: audio.isPlaying,
                     metronome: metronome,
                     onTap: togglePlay),
-                const SizedBox(width: 14),
-                StudioIconButton(
-                    icon: Icons.skip_next,
-                    size: 28,
-                    onTap: audio.hasNext ? audio.next : null),
+                const SizedBox(width: 16),
+                // Right controls, balanced against the left group.
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      StudioIconButton(
+                          icon: Icons.skip_next,
+                          size: 28,
+                          onTap: audio.hasNext ? audio.next : null),
+                    ],
+                  ),
+                ),
               ],
             ),
           ],

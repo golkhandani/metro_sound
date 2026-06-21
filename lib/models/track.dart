@@ -11,7 +11,8 @@ class Track {
 
   // Per-track metronome preset
   int bpm;
-  int beatsPerBar;
+  int beatsPerBar; // time signature numerator
+  int timeSigDenominator; // time signature denominator (4, 8, 2…)
   bool metronomeOn;
   int syncOffsetMs; // manual metronome-vs-music alignment
   double speed; // playback speed multiplier for music + metronome (1.0 = normal)
@@ -30,6 +31,7 @@ class Track {
     required this.audioPath,
     this.bpm = 80,
     this.beatsPerBar = 4,
+    this.timeSigDenominator = 4,
     this.metronomeOn = false,
     this.syncOffsetMs = 0,
     this.speed = 1.0,
@@ -62,6 +64,7 @@ class Track {
         'audioPath': audioPath,
         'bpm': bpm,
         'beatsPerBar': beatsPerBar,
+        'timeSigDenominator': timeSigDenominator,
         'metronomeOn': metronomeOn,
         'syncOffsetMs': syncOffsetMs,
         'speed': speed,
@@ -77,6 +80,7 @@ class Track {
         audioPath: j['audioPath'] as String,
         bpm: (j['bpm'] as num?)?.toInt() ?? 80,
         beatsPerBar: (j['beatsPerBar'] as num?)?.toInt() ?? 4,
+        timeSigDenominator: (j['timeSigDenominator'] as num?)?.toInt() ?? 4,
         metronomeOn: j['metronomeOn'] as bool? ?? false,
         syncOffsetMs: (j['syncOffsetMs'] as num?)?.toInt() ?? 0,
         speed: (j['speed'] as num?)?.toDouble() ?? 1.0,

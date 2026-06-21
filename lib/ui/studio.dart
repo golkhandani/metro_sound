@@ -126,7 +126,10 @@ class StudioScaffold extends StatelessWidget {
                   stops: [0.0, 0.6],
                 ),
               ),
-              child: body,
+              // No bottom bar → keep content clear of the home indicator.
+              child: bottomBar == null
+                  ? SafeArea(top: false, child: body)
+                  : body,
             ),
           ),
           ?bottomBar,
@@ -149,16 +152,19 @@ class _TopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final topInset = MediaQuery.paddingOf(context).top;
     return Container(
-      height: 56,
       decoration: const BoxDecoration(
         color: Studio.surface,
         border: Border(bottom: BorderSide(color: Studio.line)),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: SafeArea(
-        bottom: false,
-        child: Row(
+      // Background extends under the status bar; content sits below it.
+      padding: EdgeInsets.only(top: topInset),
+      child: SizedBox(
+        height: 56,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
           children: [
             if (showBack)
               StudioIconButton(
@@ -192,6 +198,7 @@ class _TopBar extends StatelessWidget {
             ),
             ...actions,
           ],
+        ),
         ),
       ),
     );
@@ -580,8 +587,14 @@ Future<void> showStudioMenu(BuildContext context,
   return showModalBottomSheet<void>(
     context: context,
     backgroundColor: Colors.transparent,
+    isScrollControlled: true,
     builder: (ctx) => Container(
       margin: const EdgeInsets.all(10),
+      // Cap the height so long menus (e.g. time signatures) scroll instead of
+      // overflowing.
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(ctx).size.height * 0.7,
+      ),
       decoration: BoxDecoration(
         color: Studio.surface,
         borderRadius: BorderRadius.circular(16),
@@ -599,36 +612,45 @@ Future<void> showStudioMenu(BuildContext context,
                     alignment: Alignment.centerLeft,
                     child: Text(title.toUpperCase(), style: Studio.label)),
               ),
-            for (final a in actions)
-              _Pressable(
-                onTap: () {
-                  Navigator.pop(ctx);
-                  a.onTap();
-                },
-                child: Container(
-                  width: double.infinity,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  child: Row(
-                    children: [
-                      if (a.icon != null) ...[
-                        Icon(a.icon,
-                            size: 19,
-                            color: a.destructive
-                                ? Studio.red
-                                : Studio.textPrimary),
-                        const SizedBox(width: 12),
-                      ],
-                      Text(a.label,
-                          style: TextStyle(
-                              fontSize: 15,
-                              color: a.destructive
-                                  ? Studio.red
-                                  : Studio.textPrimary)),
-                    ],
-                  ),
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final a in actions)
+                      _Pressable(
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          a.onTap();
+                        },
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
+                          child: Row(
+                            children: [
+                              if (a.icon != null) ...[
+                                Icon(a.icon,
+                                    size: 19,
+                                    color: a.destructive
+                                        ? Studio.red
+                                        : Studio.textPrimary),
+                                const SizedBox(width: 12),
+                              ],
+                              Text(a.label,
+                                  style: TextStyle(
+                                      fontSize: 15,
+                                      color: a.destructive
+                                          ? Studio.red
+                                          : Studio.textPrimary)),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
+            ),
           ],
         ),
       ),
@@ -731,6 +753,34 @@ Future<String?> studioPrompt(BuildContext context,
       ),
     ),
   );
+}
+
+/// Brief, non-blocking studio-styled toast.
+void showToast(BuildContext context, String message) {
+  final overlay = Overlay.of(context);
+  late OverlayEntry entry;
+  entry = OverlayEntry(
+    builder: (ctx) => Positioned(
+      bottom: 60,
+      left: 0,
+      right: 0,
+      child: IgnorePointer(
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+            decoration: BoxDecoration(
+              color: Studio.surfaceHigh,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: Studio.line),
+            ),
+            child: Text(message, style: Studio.body),
+          ),
+        ),
+      ),
+    ),
+  );
+  overlay.insert(entry);
+  Future.delayed(const Duration(seconds: 2), entry.remove);
 }
 
 class _DialogShell extends StatelessWidget {

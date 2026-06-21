@@ -41,7 +41,10 @@
       "Bash(rsvg-convert -w 1024 -h 1024 icon_fullbleed.svg -o icon_ios.png)",
       "Bash(rsvg-convert -w 1024 -h 1024 icon_macos.svg -o icon_macos.png)",
       "Bash(open \"/Users/mrzg/Work/metro_sound/build/macos/Build/Products/Release/Metro Sound.app\")",
-      "Bash(screencapture -o -x /tmp/release.png)"
+      "Bash(screencapture -o -x /tmp/release.png)",
+      "mcp__claude_ai_Google_Drive__search_files",
+      "mcp__claude_ai_Google_Drive__get_file_metadata",
+      "Bash(flutter build *)"
     ]
   }
 }

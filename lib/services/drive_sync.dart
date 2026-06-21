@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sign_in_as_googleapis_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:http/http.dart' as http;
@@ -28,14 +30,20 @@ class DriveSyncService extends ChangeNotifier {
   AutoRefreshingAuthClient? _authClient;
   String? _accountLabel;
 
+  // iOS/Android use native Google Sign-In (returns to the app); macOS uses the
+  // desktop loopback flow above.
+  final GoogleSignIn _gsi = GoogleSignIn(scopes: _scopes);
+  GoogleSignInAccount? _gsiUser;
+  bool get _useGsi => !kIsWeb && Platform.isIOS;
+
   late File _credsFile;
 
   bool _busy = false;
   String _status = '';
   double? _progress; // 0..1 during a transfer, null otherwise
 
-  bool get configured => googleConfigured;
-  bool get isConnected => _creds != null;
+  bool get configured => _useGsi ? googleIosConfigured : googleConfigured;
+  bool get isConnected => _useGsi ? _gsiUser != null : _creds != null;
   String? get accountLabel => _accountLabel;
   bool get busy => _busy;
   String get status => _status;
@@ -44,6 +52,16 @@ class DriveSyncService extends ChangeNotifier {
   ClientId get _clientId => ClientId(googleClientId, googleClientSecret);
 
   Future<void> init() async {
+    if (_useGsi) {
+      try {
+        _gsiUser = await _gsi.signInSilently();
+        _accountLabel = _gsiUser?.email;
+      } catch (e) {
+        debugPrint('Google silent sign-in: $e');
+      }
+      notifyListeners();
+      return;
+    }
     final dir = await getApplicationSupportDirectory();
     _credsFile = File(p.join(dir.path, 'google_creds.json'));
     await _loadCreds();
@@ -58,6 +76,24 @@ class DriveSyncService extends ChangeNotifier {
 
   Future<void> connect() async {
     if (!configured) return;
+    if (_useGsi) {
+      _setBusy(true, 'Signing in…');
+      try {
+        _gsiUser = await _gsi.signIn();
+        if (_gsiUser != null) {
+          _accountLabel = _gsiUser!.email;
+          _setStatus('Connected as $_accountLabel');
+        } else {
+          _setStatus('Sign-in cancelled');
+        }
+      } catch (e) {
+        _setStatus('Sign-in failed: $e');
+        debugPrint('Google sign-in error: $e');
+      } finally {
+        _setBusy(false);
+      }
+      return;
+    }
     _setBusy(true, 'Opening browser for Google sign-in…');
     try {
       _creds = await obtainAccessCredentialsViaUserConsent(
@@ -79,6 +115,15 @@ class DriveSyncService extends ChangeNotifier {
   }
 
   Future<void> disconnect() async {
+    if (_useGsi) {
+      try {
+        await _gsi.disconnect();
+      } catch (_) {}
+      _gsiUser = null;
+      _accountLabel = null;
+      _setStatus('Disconnected');
+      return;
+    }
     _creds = null;
     _authClient = null;
     _accountLabel = null;
@@ -103,14 +148,74 @@ class DriveSyncService extends ChangeNotifier {
     }
   }
 
+  /// The Drive API authenticated for the current platform's sign-in, or null if
+  /// not connected.
+  Future<drive.DriveApi?> _api() async {
+    if (_useGsi) {
+      final client = await _gsi.authenticatedClient();
+      if (client == null) return null;
+      return drive.DriveApi(client);
+    }
+    if (_authClient == null) return null;
+    return drive.DriveApi(_authClient!);
+  }
+
+  // ─── Folders ───
+
+  /// Top-level folders the app created, for the backup/load picker.
+  Future<List<({String id, String name})>> listFolders() async {
+    final api = await _api();
+    if (api == null) return [];
+    final out = <({String id, String name})>[];
+    String? token;
+    try {
+      do {
+        final res = await api.files.list(
+          q: "mimeType='application/vnd.google-apps.folder' and "
+              "trashed=false and 'root' in parents",
+          $fields: 'nextPageToken, files(id,name)',
+          pageSize: 100,
+          pageToken: token,
+          spaces: 'drive',
+        );
+        for (final f in res.files ?? const <drive.File>[]) {
+          if (f.id != null && f.name != null) {
+            out.add((id: f.id!, name: f.name!));
+          }
+        }
+        token = res.nextPageToken;
+      } while (token != null);
+    } catch (e) {
+      debugPrint('listFolders error: $e');
+    }
+    out.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    return out;
+  }
+
   // ─── Backup (push) ───
 
-  Future<bool> backup(LibraryStore library) async {
-    if (_authClient == null) return false;
+  /// Backs up into [folderId] if given, else a folder named [folderName]
+  /// (created if needed), else the default "Metro Sound" folder.
+  Future<bool> backup(LibraryStore library,
+      {String? folderId, String? folderName}) async {
+    final api = await _api();
+    if (api == null) {
+      _setStatus('Not connected');
+      return false;
+    }
+    // Never let an empty device overwrite a real backup's library.json.
+    if (library.allBooks.isEmpty && library.allTracks.isEmpty) {
+      _setStatus('Nothing to back up — this device has no books yet.');
+      return false;
+    }
     _setBusy(true, 'Preparing backup…');
     try {
-      final api = drive.DriveApi(_authClient!);
-      final rootId = await _ensureFolder(api, _folderName);
+      final rootId = folderId ??
+          await _ensureFolder(
+              api,
+              (folderName != null && folderName.trim().isNotEmpty)
+                  ? folderName.trim()
+                  : _folderName);
       final rootIndex = await _folderIndex(api, rootId);
 
       // Total = library.json + every cover + every audio + every photo.
@@ -183,12 +288,15 @@ class DriveSyncService extends ChangeNotifier {
 
   // ─── Load (pull) ───
 
-  Future<bool> loadCatalog(LibraryStore library) async {
-    if (_authClient == null) return false;
+  Future<bool> loadCatalog(LibraryStore library, {String? folderId}) async {
+    final api = await _api();
+    if (api == null) {
+      _setStatus('Not connected');
+      return false;
+    }
     _setBusy(true, 'Looking up catalog in Drive…');
     try {
-      final api = drive.DriveApi(_authClient!);
-      final rootId = await _ensureFolder(api, _folderName);
+      final rootId = folderId ?? await _ensureFolder(api, _folderName);
       final rootIndex = await _folderIndex(api, rootId);
 
       final libId = rootIndex[_libraryFile];

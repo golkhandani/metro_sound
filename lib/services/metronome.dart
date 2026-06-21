@@ -25,8 +25,16 @@ class Metronome extends ChangeNotifier {
   int _bpm = 80;
   int get bpm => _bpm;
 
-  int _beatsPerBar = 4;
+  int _beatsPerBar = 4; // numerator = number of clicks per bar
   int get beatsPerBar => _beatsPerBar;
+
+  int _denominator = 4; // note value (4, 8, 2…) — for display + accent grouping
+  int get denominator => _denominator;
+
+  String get timeSigLabel => '$_beatsPerBar/$_denominator';
+
+  // Which beat indices get the accented (downbeat) click.
+  Set<int> _accents = {0};
 
   double _volume = 0.8;
   double get volume => _volume;
@@ -162,8 +170,9 @@ class Metronome extends ChangeNotifier {
 
   void _fireBeat(int beat) {
     if (!_muted) {
-      final pl = beat == 0 ? _accent : _click;
-      final src = beat == 0 ? _accentSrc : _clickSrc;
+      final accent = _accents.contains(beat);
+      final pl = accent ? _accent : _click;
+      final src = accent ? _accentSrc : _clickSrc;
       // Replay the preloaded click from the start. play() restarts cleanly even
       // if the previous click is still ringing out.
       pl.play(src, volume: _volume).catchError(
@@ -181,10 +190,21 @@ class Metronome extends ChangeNotifier {
 
   void nudgeBpm(int delta) => setBpm(_bpm + delta);
 
-  void setBeatsPerBar(int value) {
-    _beatsPerBar = value.clamp(1, 16);
+  void setTimeSignature(int numerator, int denominator) {
+    _beatsPerBar = numerator.clamp(1, 16);
+    _denominator = denominator;
+    _accents = _computeAccents(_beatsPerBar, _denominator);
     if (_currentBeat >= _beatsPerBar) _currentBeat = 0;
     notifyListeners();
+  }
+
+  /// Compound meters (6/8, 9/8, 12/8) are felt in groups of three eighths, so
+  /// accent the start of each group. Everything else accents just beat 1.
+  static Set<int> _computeAccents(int numerator, int denominator) {
+    if (denominator == 8 && numerator >= 6 && numerator % 3 == 0) {
+      return {for (var i = 0; i < numerator; i += 3) i};
+    }
+    return {0};
   }
 
   Future<void> setVolume(double v) async {

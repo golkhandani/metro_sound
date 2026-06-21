@@ -98,9 +98,27 @@ class LibraryStore extends ChangeNotifier {
       _tracks
         ..clear()
         ..addAll(trackList.map((e) => Track.fromJson(e as Map<String, dynamic>)));
+      _rehomePaths();
       await _migrateOrphans();
+      await save(); // persist the corrected paths
     } catch (e) {
       debugPrint('LibraryStore load error: $e');
+    }
+  }
+
+  /// iOS (and sandboxed macOS) move the app's data container on reinstall, so
+  /// the absolute paths saved in library.json go stale. Rebuild each path from
+  /// the *current* directory + the stored filename so files are found again.
+  void _rehomePaths() {
+    for (final t in _tracks) {
+      t.audioPath = p.join(_audioDir.path, p.basename(t.audioPath));
+      for (var i = 0; i < t.photoPaths.length; i++) {
+        t.photoPaths[i] = p.join(_photoDir.path, p.basename(t.photoPaths[i]));
+      }
+    }
+    for (final b in _books) {
+      final c = b.coverPath;
+      if (c != null) b.coverPath = p.join(_coverDir.path, p.basename(c));
     }
   }
 
