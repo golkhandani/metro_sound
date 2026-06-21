@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -75,10 +77,23 @@ class _PlayerScreenState extends State<PlayerScreen> {
     final track = audio.current;
     WidgetsBinding.instance.addPostFrameCallback((_) => _syncPreset(track));
 
+    // Blurred book cover behind the player for an "album" feel.
+    String? coverPath;
+    if (track != null) {
+      final book = context
+          .read<LibraryStore>()
+          .books
+          .where((b) => b.id == track.bookId)
+          .firstOrNull;
+      final c = book?.coverPath;
+      if (c != null && File(c).existsSync()) coverPath = c;
+    }
+
     return StudioScaffold(
       title: track?.title ?? 'Player',
       subtitle: 'Now Playing',
       showBack: true,
+      backdrop: coverPath == null ? null : _CoverBackdrop(path: coverPath),
       bottomBar: track == null ? null : const _Transport(),
       body: track == null
           ? const Center(child: Text('No track loaded', style: Studio.bodyDim))
@@ -585,15 +600,18 @@ class _Transport extends StatelessWidget {
                     Text(_fmt(pos),
                         style:
                             Studio.numeric(11, color: Studio.textSecondary)),
+                    const SizedBox(width: 10),
                     Expanded(
-                      child: StudioSlider(
-                        min: 0,
-                        max: maxMs == 0 ? 1 : maxMs,
-                        value: pos.inMilliseconds.toDouble(),
-                        onChanged: (v) =>
-                            audio.seek(Duration(milliseconds: v.round())),
+                      child: _WaveformSeek(
+                        progress: maxMs == 0
+                            ? 0
+                            : (pos.inMilliseconds / maxMs).clamp(0.0, 1.0),
+                        seed: audio.current?.id ?? '',
+                        onSeek: (frac) =>
+                            audio.seek(Duration(milliseconds: (frac * maxMs).round())),
                       ),
                     ),
+                    const SizedBox(width: 10),
                     Text(_fmt(dur),
                         style:
                             Studio.numeric(11, color: Studio.textSecondary)),
@@ -716,4 +734,113 @@ class _PlayButtonState extends State<_PlayButton>
       ),
     );
   }
+}
+
+// ───────────────────────── Cover backdrop ─────────────────────────
+
+/// Heavily blurred, dimmed book cover painted behind the player content so the
+/// screen feels tied to the lesson's "album" without hurting readability.
+class _CoverBackdrop extends StatelessWidget {
+  final String path;
+  const _CoverBackdrop({required this.path});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Image.file(File(path), fit: BoxFit.cover),
+        // Blur + darken so foreground cards stay legible.
+        BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+          child: const SizedBox.expand(),
+        ),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Studio.bg.withValues(alpha: 0.82),
+                Studio.bg.withValues(alpha: 0.94),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ───────────────────────── Waveform seek ─────────────────────────
+
+/// A stylized waveform scrubber. The bar pattern is deterministic per track
+/// (so it's stable), the played portion is amber, the rest dim. Tap or drag
+/// to seek.
+class _WaveformSeek extends StatelessWidget {
+  final double progress; // 0..1
+  final String seed;
+  final ValueChanged<double> onSeek;
+  const _WaveformSeek(
+      {required this.progress, required this.seed, required this.onSeek});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, c) {
+        void seekAt(double dx) =>
+            onSeek((dx / c.maxWidth).clamp(0.0, 1.0));
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapDown: (d) => seekAt(d.localPosition.dx),
+          onHorizontalDragStart: (d) => seekAt(d.localPosition.dx),
+          onHorizontalDragUpdate: (d) => seekAt(d.localPosition.dx),
+          child: SizedBox(
+            height: 34,
+            child: CustomPaint(
+              size: Size.infinite,
+              painter: _WavePainter(progress: progress, seed: seed),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _WavePainter extends CustomPainter {
+  final double progress;
+  final String seed;
+  _WavePainter({required this.progress, required this.seed});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const barW = 3.0;
+    const gap = 2.0;
+    final n = (size.width / (barW + gap)).floor();
+    if (n <= 0) return;
+    final mid = size.height / 2;
+    final base = seed.hashCode;
+    final playedBars = (progress * n).round();
+
+    final played = Paint()..color = Studio.amber;
+    final rest = Paint()..color = Studio.line;
+
+    for (var i = 0; i < n; i++) {
+      // Deterministic pseudo-random height with a gentle envelope.
+      final r = ((base ^ (i * 2654435761)) & 0x7fffffff) % 1000 / 1000.0;
+      final env = 0.45 + 0.55 * (0.5 + 0.5 * math.sin(i * 0.45));
+      final h = (size.height * 0.9) * (0.18 + 0.82 * r * env);
+      final x = i * (barW + gap);
+      final rrect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(x, mid - h / 2, barW, h),
+        const Radius.circular(1.5),
+      );
+      canvas.drawRRect(rrect, i < playedBars ? played : rest);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _WavePainter old) =>
+      old.progress != progress || old.seed != seed;
 }

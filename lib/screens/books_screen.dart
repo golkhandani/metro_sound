@@ -145,13 +145,7 @@ class _BookTile extends StatelessWidget {
                     if (hasCover)
                       Image.file(File(book.coverPath!), fit: BoxFit.cover)
                     else
-                      Container(
-                        color: Studio.surfaceHigh,
-                        child: const Center(
-                          child: Icon(Icons.album_outlined,
-                              size: 44, color: Studio.textDim),
-                        ),
-                      ),
+                      _ColorPlaceholder(seed: book.title),
                     Positioned(
                       top: 4,
                       right: 4,
@@ -189,6 +183,34 @@ class _BookTile extends StatelessWidget {
             Text(total == 0 ? 'Empty' : '$total tracks', style: Studio.bodyDim),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Colorful placeholder cover (hue derived from the title) so an empty library
+/// isn't all grey.
+class _ColorPlaceholder extends StatelessWidget {
+  final String seed;
+  const _ColorPlaceholder({required this.seed});
+
+  @override
+  Widget build(BuildContext context) {
+    final h = seed.codeUnits.fold<int>(7, (a, c) => (a * 31 + c) & 0x7fffffff);
+    final hue = (h % 360).toDouble();
+    final c1 = HSLColor.fromAHSL(1, hue, 0.45, 0.40).toColor();
+    final c2 = HSLColor.fromAHSL(1, (hue + 28) % 360, 0.50, 0.22).toColor();
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [c1, c2],
+        ),
+      ),
+      child: Center(
+        child: Icon(Icons.album_outlined,
+            size: 44, color: Colors.white.withValues(alpha: 0.55)),
       ),
     );
   }

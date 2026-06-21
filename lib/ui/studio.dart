@@ -27,9 +27,10 @@ class Studio {
   static const teal = Color(0xFF35D0BA);
   static const red = Color(0xFFFF5D5D);
 
-  // Monospace family for numeric readouts (Menlo/Monaco ship on macOS/iOS).
+  // Bundled monospace for numeric readouts — identical on every platform.
   static const mono = TextStyle(
-    fontFamilyFallback: ['Menlo', 'Monaco', 'Roboto Mono', 'monospace'],
+    fontFamily: 'JetBrainsMono',
+    fontFamilyFallback: ['Menlo', 'Monaco', 'monospace'],
   );
 
   static TextStyle numeric(double size, {Color color = textPrimary}) =>
@@ -101,6 +102,10 @@ class StudioScaffold extends StatelessWidget {
   final Widget? bottomBar;
   final bool showBack;
 
+  /// Optional decorative layer painted behind the whole scaffold (e.g. a
+  /// blurred album cover in the player). Sits under the top bar and body.
+  final Widget? backdrop;
+
   const StudioScaffold({
     super.key,
     required this.title,
@@ -109,39 +114,50 @@ class StudioScaffold extends StatelessWidget {
     this.actions = const [],
     this.bottomBar,
     this.showBack = false,
+    this.backdrop,
   });
 
   @override
   Widget build(BuildContext context) {
+    final content = Column(
+      children: [
+        _TopBar(
+            title: title,
+            subtitle: subtitle,
+            actions: actions,
+            showBack: showBack),
+        Expanded(
+          child: DecoratedBox(
+            // Soft amber glow bleeding down from the top for depth. When a
+            // backdrop is present, skip the solid fill so it shows through.
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: const Alignment(0, -1.2),
+                radius: 1.4,
+                colors: [
+                  const Color(0x14FFB020),
+                  backdrop == null ? Studio.bg : Colors.transparent,
+                ],
+                stops: const [0.0, 0.6],
+              ),
+            ),
+            // No bottom bar → keep content clear of the home indicator.
+            child: bottomBar == null
+                ? SafeArea(top: false, child: body)
+                : body,
+          ),
+        ),
+        ?bottomBar,
+      ],
+    );
     return Scaffold(
       backgroundColor: Studio.bg,
-      body: Column(
-        children: [
-          _TopBar(
-              title: title,
-              subtitle: subtitle,
-              actions: actions,
-              showBack: showBack),
-          Expanded(
-            child: DecoratedBox(
-              // Soft amber glow bleeding down from the top for depth.
-              decoration: const BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment(0, -1.2),
-                  radius: 1.4,
-                  colors: [Color(0x14FFB020), Studio.bg],
-                  stops: [0.0, 0.6],
-                ),
-              ),
-              // No bottom bar → keep content clear of the home indicator.
-              child: bottomBar == null
-                  ? SafeArea(top: false, child: body)
-                  : body,
+      body: backdrop == null
+          ? content
+          : Stack(
+              fit: StackFit.expand,
+              children: [backdrop!, content],
             ),
-          ),
-          ?bottomBar,
-        ],
-      ),
     );
   }
 }
@@ -291,12 +307,24 @@ class NumericReadout extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(value,
-            style: Studio.numeric(size, color: color).copyWith(
-              shadows: glow
-                  ? [Shadow(color: color.withValues(alpha: 0.5), blurRadius: 16)]
-                  : null,
-            )),
+        // Animate the value in/out vertically when it changes (e.g. BPM).
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 160),
+          transitionBuilder: (child, anim) => ClipRect(
+            child: SlideTransition(
+              position: Tween(begin: const Offset(0, 0.35), end: Offset.zero)
+                  .animate(anim),
+              child: FadeTransition(opacity: anim, child: child),
+            ),
+          ),
+          child: Text(value,
+              key: ValueKey(value),
+              style: Studio.numeric(size, color: color).copyWith(
+                shadows: glow
+                    ? [Shadow(color: color.withValues(alpha: 0.5), blurRadius: 16)]
+                    : null,
+              )),
+        ),
         if (unit.isNotEmpty)
           Text(unit.toUpperCase(),
               style: Studio.label.copyWith(fontSize: 10)),

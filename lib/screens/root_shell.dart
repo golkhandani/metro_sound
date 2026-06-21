@@ -76,18 +76,51 @@ class _BottomNav extends StatelessWidget {
         top: false,
         child: SizedBox(
           height: 60,
-          child: Row(
-            children: [
-              for (var i = 0; i < _items.length; i++)
-                Expanded(
-                  child: _NavItem(
-                    icon: _items[i].$1,
-                    label: _items[i].$2,
-                    active: i == index,
-                    onTap: () => onTap(i),
+          child: LayoutBuilder(
+            builder: (context, c) {
+              final itemW = c.maxWidth / _items.length;
+              return Stack(
+                children: [
+                  // Sliding amber indicator across the top of the active tab.
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 240),
+                    curve: Curves.easeOutCubic,
+                    left: index * itemW,
+                    top: 0,
+                    width: itemW,
+                    height: 3,
+                    child: Center(
+                      child: Container(
+                        width: 26,
+                        height: 3,
+                        decoration: BoxDecoration(
+                          color: Studio.amber,
+                          borderRadius: BorderRadius.circular(2),
+                          boxShadow: [
+                            BoxShadow(
+                                color: Studio.amber.withValues(alpha: 0.6),
+                                blurRadius: 8),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-            ],
+                  Row(
+                    children: [
+                      for (var i = 0; i < _items.length; i++)
+                        Expanded(
+                          child: _NavItem(
+                            icon: _items[i].$1,
+                            label: _items[i].$2,
+                            active: i == index,
+                            onTap: () => onTap(i),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -117,8 +150,26 @@ class _NavItem extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: color, size: 23),
-            const SizedBox(height: 3),
+            AnimatedScale(
+              scale: active ? 1.12 : 1,
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutBack,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: active
+                      ? [
+                          BoxShadow(
+                              color: Studio.amber.withValues(alpha: 0.35),
+                              blurRadius: 14)
+                        ]
+                      : null,
+                ),
+                child: Icon(icon, color: color, size: 23),
+              ),
+            ),
+            const SizedBox(height: 4),
             Text(label,
                 style: TextStyle(
                     fontSize: 10,

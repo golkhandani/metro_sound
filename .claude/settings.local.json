@@ -46,7 +46,13 @@
       "mcp__claude_ai_Google_Drive__get_file_metadata",
       "Bash(flutter build *)",
       "Bash(screencapture -o -x /tmp/audit_home.png)",
-      "Bash(ls -la /tmp/audit_home.png)"
+      "Bash(ls -la /tmp/audit_home.png)",
+      "Bash(curl -fsSL \"https://github.com/JetBrains/JetBrainsMono/raw/master/fonts/ttf/JetBrainsMono-Regular.ttf\" -o assets/fonts/JetBrainsMono-Regular.ttf)",
+      "Bash(curl -fsSL \"https://github.com/JetBrains/JetBrainsMono/raw/master/fonts/ttf/JetBrainsMono-Bold.ttf\" -o assets/fonts/JetBrainsMono-Bold.ttf)",
+      "Bash(file assets/fonts/*.ttf)",
+      "Bash(flutter analyze *)",
+      "Bash(flutter devices *)",
+      "Bash(git add *)"
     ]
   }
 }
