@@ -23,6 +23,10 @@ class Track {
   // Practice photos (absolute paths inside app storage)
   List<String> photoPaths;
 
+  /// Epoch-ms of the last local edit — used by two-way Drive sync to merge
+  /// changes with last-write-wins per entity.
+  int updatedAt;
+
   Track({
     required this.id,
     this.bookId = '',
@@ -36,6 +40,7 @@ class Track {
     this.syncOffsetMs = 0,
     this.speed = 1.0,
     this.done = false,
+    this.updatedAt = 0,
     List<String>? photoPaths,
   }) : photoPaths = photoPaths ?? [];
 
@@ -69,6 +74,7 @@ class Track {
         'syncOffsetMs': syncOffsetMs,
         'speed': speed,
         'done': done,
+        'updatedAt': updatedAt,
         'photoPaths': photoPaths,
       };
 
@@ -85,6 +91,7 @@ class Track {
         syncOffsetMs: (j['syncOffsetMs'] as num?)?.toInt() ?? 0,
         speed: (j['speed'] as num?)?.toDouble() ?? 1.0,
         done: j['done'] as bool? ?? false,
+        updatedAt: (j['updatedAt'] as num?)?.toInt() ?? 0,
         photoPaths:
             (j['photoPaths'] as List?)?.map((e) => e as String).toList() ?? [],
       );

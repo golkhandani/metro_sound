@@ -19,6 +19,8 @@ Future<void> main() async {
   final settings = AppSettings();
   await Future.wait(
       [library.init(), metronome.init(), drive.init(), settings.init()]);
+  // Wire the library into Drive sync so two-way auto-sync can observe edits.
+  await drive.attachLibrary(library);
 
   runApp(MetroSoundApp(
     library: library,

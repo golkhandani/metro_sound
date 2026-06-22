@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -28,11 +27,22 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Metronome? _metro;
   StreamSubscription<void>? _loopSub;
 
+  bool _clockBound = false;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _audio = context.read<AudioController>();
     _metro = context.read<Metronome>();
+    // Give the metronome the music clock so its lock-to-music mode can read the
+    // live track position.
+    if (!_clockBound) {
+      _clockBound = true;
+      _metro!.bindMusicClock(
+        positionMs: () => _audio!.position.inMilliseconds,
+        playing: () => _audio!.isPlaying,
+      );
+    }
     // When the track loops back to the start, re-lock the click to beat 1 so it
     // stays aligned with the music's restart.
     _loopSub ??= _audio!.loopStream.listen((_) {
@@ -77,23 +87,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
     final track = audio.current;
     WidgetsBinding.instance.addPostFrameCallback((_) => _syncPreset(track));
 
-    // Blurred book cover behind the player for an "album" feel.
-    String? coverPath;
-    if (track != null) {
-      final book = context
-          .read<LibraryStore>()
-          .books
-          .where((b) => b.id == track.bookId)
-          .firstOrNull;
-      final c = book?.coverPath;
-      if (c != null && File(c).existsSync()) coverPath = c;
-    }
-
     return StudioScaffold(
       title: track?.title ?? 'Player',
       subtitle: 'Now Playing',
       showBack: true,
-      backdrop: coverPath == null ? null : _CoverBackdrop(path: coverPath),
       bottomBar: track == null ? null : const _Transport(),
       body: track == null
           ? const Center(child: Text('No track loaded', style: Studio.bodyDim))
@@ -300,20 +297,13 @@ class _MetronomeCard extends StatelessWidget {
     return StudioCard(
       child: Column(
         children: [
-          SectionLabel('Metronome',
-              icon: Icons.av_timer,
-              trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                Text('VISUAL', style: Studio.label.copyWith(fontSize: 10)),
-                const SizedBox(width: 8),
-                StudioSwitch(
-                    value: m.visualEnabled, onChanged: m.setVisualEnabled),
-              ])),
+          const SectionLabel('Metronome', icon: Icons.av_timer),
           if (m.visualEnabled) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             MetronomeVisual(metronome: m),
             const SizedBox(height: 6),
           ] else
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
           BeatIndicator(metronome: m),
           const SizedBox(height: 14),
           Row(
@@ -367,6 +357,10 @@ class _MetronomeCard extends StatelessWidget {
             padding: EdgeInsets.symmetric(vertical: 14),
             child: Divider(color: Studio.line, height: 1),
           ),
+          const _LockRow(),
+          const SizedBox(height: 14),
+          const _VisualRow(),
+          const SizedBox(height: 14),
           _SyncRow(onChanged: onChanged),
         ],
       ),
@@ -393,6 +387,66 @@ class _Stepper extends StatelessWidget {
         ),
         child: Icon(icon, color: Studio.amber, size: 22),
       ),
+    );
+  }
+}
+
+/// Toggle for the animated pendulum metronome.
+class _VisualRow extends StatelessWidget {
+  const _VisualRow();
+
+  @override
+  Widget build(BuildContext context) {
+    final m = context.watch<Metronome>();
+    final on = m.visualEnabled;
+    return Row(
+      children: [
+        Icon(on ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+            color: on ? Studio.amber : Studio.textSecondary, size: 22),
+        const SizedBox(width: 12),
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Visual metronome', style: Studio.title),
+              SizedBox(height: 2),
+              Text('Animated pendulum that swings with the beat',
+                  style: Studio.bodyDim),
+            ],
+          ),
+        ),
+        StudioSwitch(value: on, onChanged: m.setVisualEnabled),
+      ],
+    );
+  }
+}
+
+/// Toggle for locking the click to the music's playback position.
+class _LockRow extends StatelessWidget {
+  const _LockRow();
+
+  @override
+  Widget build(BuildContext context) {
+    final m = context.watch<Metronome>();
+    final on = m.lockedToMusic;
+    return Row(
+      children: [
+        Icon(on ? Icons.lock_clock : Icons.lock_open_outlined,
+            color: on ? Studio.amber : Studio.textSecondary, size: 22),
+        const SizedBox(width: 12),
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Lock click to music', style: Studio.title),
+              SizedBox(height: 2),
+              Text('Beats follow the track so the click never drifts',
+                  style: Studio.bodyDim),
+            ],
+          ),
+        ),
+        StudioSwitch(value: on, onChanged: m.setLockedToMusic),
+      ],
     );
   }
 }
@@ -450,7 +504,10 @@ class _SyncRow extends StatelessWidget {
                 }),
           ],
         ),
-        const Text('Nudge until the click lines up with the music',
+        Text(
+            m.lockedToMusic
+                ? 'Click is locked to the music position — nudge for fine alignment'
+                : 'Nudge until the click lines up with the music',
             style: Studio.bodyDim),
       ],
     );
@@ -561,7 +618,9 @@ class _Transport extends StatelessWidget {
         await audio.pause();
         metronome.pause(); // freeze phase so resume stays in sync
       } else {
-        // Resume from the frozen phase, or start fresh if not yet running.
+        // Arm the click first (just_audio's play() Future doesn't resolve until
+        // playback *ends*, so it must come last). Lock-mode's poll picks up the
+        // music a few ms later once playback actually starts.
         if (metronome.running) {
           metronome.resume();
         } else {
@@ -736,42 +795,6 @@ class _PlayButtonState extends State<_PlayButton>
   }
 }
 
-// ───────────────────────── Cover backdrop ─────────────────────────
-
-/// Heavily blurred, dimmed book cover painted behind the player content so the
-/// screen feels tied to the lesson's "album" without hurting readability.
-class _CoverBackdrop extends StatelessWidget {
-  final String path;
-  const _CoverBackdrop({required this.path});
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        Image.file(File(path), fit: BoxFit.cover),
-        // Blur + darken so foreground cards stay legible.
-        BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 40, sigmaY: 40),
-          child: const SizedBox.expand(),
-        ),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Studio.bg.withValues(alpha: 0.82),
-                Studio.bg.withValues(alpha: 0.94),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 // ───────────────────────── Waveform seek ─────────────────────────
 
 /// A stylized waveform scrubber. The bar pattern is deterministic per track
@@ -788,8 +811,7 @@ class _WaveformSeek extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, c) {
-        void seekAt(double dx) =>
-            onSeek((dx / c.maxWidth).clamp(0.0, 1.0));
+        void seekAt(double dx) => onSeek((dx / c.maxWidth).clamp(0.0, 1.0));
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTapDown: (d) => seekAt(d.localPosition.dx),

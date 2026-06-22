@@ -52,7 +52,15 @@
       "Bash(file assets/fonts/*.ttf)",
       "Bash(flutter analyze *)",
       "Bash(flutter devices *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -q -m ' *)",
+      "Bash(git push *)",
+      "Bash(DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer flutter build macos --release --dart-define-from-file=env.json)",
+      "Bash(osascript -e 'tell application \"System Events\" to get name of every process whose name contains \"Metro\"')",
+      "Bash(kill 9184)",
+      "Bash(pkill -f \"Release/Metro Sound\")",
+      "Bash(open \"build/macos/Build/Products/Release/Metro Sound.app\")",
+      "Bash(/usr/libexec/PlistBuddy -c \"Set :NSMicrophoneUsageDescription 'Metro Sound uses the microphone to tune your instrument and record practice tracks.'\" ios/Runner/Info.plist)"
     ]
   }
 }

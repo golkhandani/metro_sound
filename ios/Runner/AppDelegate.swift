@@ -1,5 +1,6 @@
 import Flutter
 import UIKit
+import AVFoundation
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
@@ -7,7 +8,30 @@ import UIKit
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+    let didFinish = super.application(application, didFinishLaunchingWithOptions: launchOptions)
+
+    // Microphone permission channel — flutter_audio_capture doesn't request it,
+    // so the recorder asks through here before starting capture.
+    if let controller = window?.rootViewController as? FlutterViewController {
+      let micChannel = FlutterMethodChannel(
+        name: "metro_sound/mic", binaryMessenger: controller.binaryMessenger)
+      micChannel.setMethodCallHandler { call, result in
+        guard call.method == "requestPermission" else {
+          result(FlutterMethodNotImplemented)
+          return
+        }
+        if #available(iOS 17.0, *) {
+          AVAudioApplication.requestRecordPermission { granted in
+            DispatchQueue.main.async { result(granted) }
+          }
+        } else {
+          AVAudioSession.sharedInstance().requestRecordPermission { granted in
+            DispatchQueue.main.async { result(granted) }
+          }
+        }
+      }
+    }
+    return didFinish
   }
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {

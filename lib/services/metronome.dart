@@ -1,7 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 /// Independent metronome: ticks at a set BPM alongside the music, with its own
 /// volume/mute. Emits a beat event stream that the visual widget animates to.
@@ -45,6 +49,18 @@ class Metronome extends ChangeNotifier {
   bool _visualEnabled = true;
   bool get visualEnabled => _visualEnabled;
 
+  // Lock-to-music: derive each beat from the music's playback position so the
+  // click can never drift from the recording, and scrubbing the waveform moves
+  // the click with it. On by default. Falls back to free-running when no music
+  // is playing (e.g. the standalone metronome screen).
+  bool _locked = true;
+  bool get lockedToMusic => _locked;
+
+  // The music clock, injected by the player via [bindMusicClock]. Kept as plain
+  // callbacks so this service doesn't depend on the audio layer.
+  int Function()? _musicPosMs;
+  bool Function()? _musicPlaying;
+
   // Manual sync offset in milliseconds: shifts the click grid relative to the
   // music. Positive = click later, negative = click earlier.
   int _syncOffsetMs = 0;
@@ -68,8 +84,17 @@ class Metronome extends ChangeNotifier {
   final Stopwatch _sw = Stopwatch();
   int _nextBeatUs = 0;
 
+  // Lock-mode polling state.
+  Timer? _lockTimer;
+  int _lockLastIdx = 0;
+  bool _lockPrimed = false;
+  bool _inFallback = false;
+
   // Tap-tempo state
   final List<int> _taps = [];
+
+  // Persisted preferences (visual + lock).
+  File? _prefsFile;
 
   Future<void> init() async {
     try {
@@ -82,12 +107,37 @@ class Metronome extends ChangeNotifier {
     } catch (e) {
       debugPrint('Metronome init error: $e');
     }
+    // Load saved toggle preferences (defaults: both on).
+    try {
+      final dir = await getApplicationSupportDirectory();
+      _prefsFile = File(p.join(dir.path, 'metronome.json'));
+      if (await _prefsFile!.exists()) {
+        final j =
+            jsonDecode(await _prefsFile!.readAsString()) as Map<String, dynamic>;
+        if (j['visual'] is bool) _visualEnabled = j['visual'] as bool;
+        if (j['lock'] is bool) _locked = j['lock'] as bool;
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Metronome prefs load error: $e');
+    }
+  }
+
+  Future<void> _savePrefs() async {
+    try {
+      await _prefsFile
+          ?.writeAsString(jsonEncode({'visual': _visualEnabled, 'lock': _locked}));
+    } catch (_) {}
   }
 
   void start() {
     if (_running) return;
     _running = true;
-    _beginFromDownbeat();
+    if (_locked) {
+      _lockArm();
+    } else {
+      _beginFromDownbeat();
+    }
     notifyListeners();
   }
 
@@ -95,7 +145,11 @@ class Metronome extends ChangeNotifier {
   /// so the click re-aligns with the music's restart.
   void restartFromDownbeat() {
     if (!_running) return;
-    _beginFromDownbeat();
+    if (_locked) {
+      _lockArm();
+    } else {
+      _beginFromDownbeat();
+    }
     notifyListeners();
   }
 
@@ -120,14 +174,125 @@ class Metronome extends ChangeNotifier {
     _timer = Timer(Duration(microseconds: firstUs), _tick);
   }
 
+  /// Inject the music clock so lock-mode can read the track's live position.
+  void bindMusicClock({
+    required int Function() positionMs,
+    required bool Function() playing,
+  }) {
+    _musicPosMs = positionMs;
+    _musicPlaying = playing;
+  }
+
+  void setLockedToMusic(bool v) {
+    if (v == _locked) return;
+    _locked = v;
+    // Switch engines live if we're currently ticking.
+    if (_running && !_paused) {
+      if (v) {
+        _timer?.cancel();
+        _timer = null;
+        _sw.stop();
+        _lockArm();
+      } else {
+        _lockCancel();
+        _beginFromDownbeat();
+      }
+    }
+    notifyListeners();
+    _savePrefs();
+  }
+
+  // One beat lasts this many milliseconds of *track* time (independent of
+  // playback speed — sped-up audio simply reaches each beat sooner).
+  double _beatMsTrack() => 60000.0 / (_bpm <= 0 ? 1 : _bpm);
+
+  // Absolute beat index (…,-1,0,1,2,…) the given music position falls in.
+  int _boundaryIndex(double posMs) =>
+      ((posMs - _syncOffsetMs) / _beatMsTrack()).floor();
+
+  int _beatInBar(int idx) => ((idx % _beatsPerBar) + _beatsPerBar) % _beatsPerBar;
+
+  void _lockArm() {
+    _lockCancel();
+    _paused = false;
+    _lockPrimed = false;
+    _inFallback = false;
+    // Poll the (interpolated) music position frequently and click when we cross
+    // a beat boundary.
+    _lockTimer =
+        Timer.periodic(const Duration(milliseconds: 10), (_) => _lockPoll());
+  }
+
+  void _lockCancel() {
+    _lockTimer?.cancel();
+    _lockTimer = null;
+  }
+
+  void _lockPoll() {
+    if (!_running || _paused) return;
+    final playing = _musicPlaying?.call() ?? false;
+    if (playing) {
+      _inFallback = false;
+      final pos = (_musicPosMs?.call() ?? 0).toDouble();
+      final idx = _boundaryIndex(pos);
+      if (!_lockPrimed) {
+        // First read: adopt the current beat without replaying everything we
+        // may have scrolled past. Click straight away only if we're sitting
+        // right at a boundary (so a play-from-start downbeat isn't skipped).
+        _lockPrimed = true;
+        _lockLastIdx = idx;
+        _currentBeat = _beatInBar(idx);
+        final into = (pos - _syncOffsetMs) - idx * _beatMsTrack();
+        if (into <= _beatMsTrack() * 0.18) {
+          _fireBeat(_currentBeat);
+        } else {
+          notifyListeners();
+        }
+        return;
+      }
+      if (idx != _lockLastIdx) {
+        final forward = idx == _lockLastIdx + 1;
+        _lockLastIdx = idx;
+        _currentBeat = _beatInBar(idx);
+        if (forward) {
+          _fireBeat(_currentBeat);
+        } else {
+          // A jump (seek/scrub/loop) — realign silently, don't machine-gun.
+          notifyListeners();
+        }
+      }
+    } else {
+      // No music playing: free-run off the clock so the standalone metronome
+      // still works while lock-mode is on.
+      _lockPrimed = false;
+      if (!_inFallback) {
+        _inFallback = true;
+        _sw
+          ..reset()
+          ..start();
+        _nextBeatUs = _intervalUs();
+        _currentBeat = -1;
+      }
+      if (_sw.elapsedMicroseconds >= _nextBeatUs) {
+        _currentBeat = (_currentBeat + 1) % _beatsPerBar;
+        _fireBeat(_currentBeat);
+        _nextBeatUs += _intervalUs();
+      }
+    }
+  }
+
   /// Freeze the click at its exact current phase (used when the music pauses).
   /// Resuming continues from the same beat position so they stay in sync.
   void pause() {
     if (!_running || _paused) return;
     _paused = true;
-    _timer?.cancel();
-    _timer = null;
-    _sw.stop(); // freeze elapsed time — preserves how far we are into the beat
+    if (_locked) {
+      _lockCancel();
+    } else {
+      _timer?.cancel();
+      _timer = null;
+      _sw.stop(); // freeze elapsed time — preserves how far we are into the beat
+    }
     notifyListeners();
   }
 
@@ -135,18 +300,23 @@ class Metronome extends ChangeNotifier {
   void resume() {
     if (!_running || !_paused) return;
     _paused = false;
-    _sw.start(); // elapsed time continues from where it froze
-    final delayUs = _nextBeatUs - _sw.elapsedMicroseconds;
-    _timer = Timer(
-      Duration(microseconds: delayUs < 0 ? 0 : delayUs),
-      _tick,
-    );
+    if (_locked) {
+      _lockArm(); // re-derives phase from the music position
+    } else {
+      _sw.start(); // elapsed time continues from where it froze
+      final delayUs = _nextBeatUs - _sw.elapsedMicroseconds;
+      _timer = Timer(
+        Duration(microseconds: delayUs < 0 ? 0 : delayUs),
+        _tick,
+      );
+    }
     notifyListeners();
   }
 
   void stop() {
     _running = false;
     _paused = false;
+    _lockCancel();
     _timer?.cancel();
     _timer = null;
     _sw.stop();
@@ -222,12 +392,20 @@ class Metronome extends ChangeNotifier {
   void setVisualEnabled(bool v) {
     _visualEnabled = v;
     notifyListeners();
+    _savePrefs();
   }
 
   /// Shift the click relative to the music. Takes effect live while running, so
   /// the user can drag the slider and hear the click move into alignment.
   void setSyncOffset(int ms) {
     final clamped = ms.clamp(-1000, 1000);
+    if (_locked) {
+      // The poll reads the offset live, so boundaries shift smoothly as the
+      // slider moves — no rescheduling needed.
+      _syncOffsetMs = clamped;
+      notifyListeners();
+      return;
+    }
     final deltaUs = (clamped - _syncOffsetMs) * 1000;
     _syncOffsetMs = clamped;
     if (_running) {
@@ -253,7 +431,9 @@ class Metronome extends ChangeNotifier {
     final v = value <= 0 ? 1.0 : value;
     if (v == _speed) return;
     _speed = v;
-    if (_running && !_paused) {
+    // In lock-mode the click follows the music position regardless of speed, so
+    // nothing to reschedule. Free-mode re-locks to a clean downbeat.
+    if (_running && !_paused && !_locked) {
       _beginFromDownbeat();
     }
     notifyListeners();
@@ -288,6 +468,7 @@ class Metronome extends ChangeNotifier {
   @override
   void dispose() {
     _timer?.cancel();
+    _lockTimer?.cancel();
     _beatController.close();
     _accent.dispose();
     _click.dispose();

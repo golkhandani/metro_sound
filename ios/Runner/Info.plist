@@ -4,25 +4,6 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
-	<key>GIDClientID</key>
-	<string>858515960931-vj1vgf6q8gevoc8cv472ft9gekkj17u8.apps.googleusercontent.com</string>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>com.googleusercontent.apps.858515960931-vj1vgf6q8gevoc8cv472ft9gekkj17u8</string>
-			</array>
-		</dict>
-	</array>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Metro Sound uses the microphone to tune your instrument.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Metro Sound needs access to your photos to attach practice photos to a lesson and to set a book cover.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Metro Sound needs access to your photos to attach practice photos.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
@@ -41,10 +22,29 @@
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.858515960931-vj1vgf6q8gevoc8cv472ft9gekkj17u8</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>GIDClientID</key>
+	<string>858515960931-vj1vgf6q8gevoc8cv472ft9gekkj17u8.apps.googleusercontent.com</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Metro Sound uses the microphone to tune your instrument and record practice tracks.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Metro Sound needs access to your photos to attach practice photos.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Metro Sound needs access to your photos to attach practice photos to a lesson and to set a book cover.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

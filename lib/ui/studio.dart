@@ -283,7 +283,12 @@ class SectionLabel extends StatelessWidget {
           Icon(icon, size: 15, color: Studio.amber),
           const SizedBox(width: 8),
         ],
-        Text(text.toUpperCase(), style: Studio.label),
+        Flexible(
+          child: Text(text.toUpperCase(),
+              style: Studio.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis),
+        ),
         if (trailing != null) ...[const Spacer(), trailing!],
       ],
     );

@@ -15,6 +15,12 @@ class LibraryStore extends ChangeNotifier {
   final List<Book> _books = [];
   final List<Track> _tracks = [];
 
+  // Deletion tombstones (entity id -> epoch-ms deleted). Kept so two-way Drive
+  // sync can propagate deletions instead of resurrecting them from a peer.
+  final Map<String, int> _deleted = {};
+
+  static int _nowMs() => DateTime.now().millisecondsSinceEpoch;
+
   List<Book> get books {
     final list = [..._books]..sort((a, b) {
         final byOrder = a.order.compareTo(b.order);
@@ -42,9 +48,112 @@ class LibraryStore extends ChangeNotifier {
   // Exposed for the Drive sync service.
   List<Book> get allBooks => List.unmodifiable(_books);
   List<Track> get allTracks => List.unmodifiable(_tracks);
+  Map<String, int> get tombstones => Map.unmodifiable(_deleted);
   String get audioDirPath => _audioDir.path;
   String get photoDirPath => _photoDir.path;
   String get coverDirPath => _coverDir.path;
+
+  /// Stable fingerprint of the catalog's sync-relevant state (entity ids +
+  /// their updatedAt + tombstones). Two devices that have fully converged
+  /// produce the same signature, which the sync engine uses to stop looping.
+  int catalogSignature() {
+    final parts = <String>[];
+    for (final b in [..._books]..sort((a, b) => a.id.compareTo(b.id))) {
+      parts.add('b:${b.id}:${b.updatedAt}');
+    }
+    for (final t in [..._tracks]..sort((a, b) => a.id.compareTo(b.id))) {
+      parts.add('t:${t.id}:${t.updatedAt}');
+    }
+    for (final id in _deleted.keys.toList()..sort()) {
+      parts.add('d:$id:${_deleted[id]}');
+    }
+    // FNV-1a — stable across runs (unlike String.hashCode).
+    var h = 0x811c9dc5;
+    for (final c in parts.join('|').codeUnits) {
+      h ^= c;
+      h = (h * 0x01000193) & 0xffffffff;
+    }
+    return h;
+  }
+
+  /// Merge a remote catalog into the local one with last-write-wins per entity.
+  /// [remoteBooks]/[remoteTracks] must already have their media downloaded and
+  /// their paths point at local files (the sync service does this first).
+  /// Returns true if anything changed locally.
+  Future<bool> mergeRemote(List<Book> remoteBooks, List<Track> remoteTracks,
+      Map<String, int> remoteDeleted) async {
+    var changed = false;
+
+    // Union tombstones (newest wins).
+    remoteDeleted.forEach((id, ts) {
+      if (ts > (_deleted[id] ?? 0)) {
+        _deleted[id] = ts;
+        changed = true;
+      }
+    });
+
+    final bookById = {for (final b in _books) b.id: b};
+    for (final rb in remoteBooks) {
+      if ((_deleted[rb.id] ?? 0) >= rb.updatedAt) continue; // deleted later
+      final lb = bookById[rb.id];
+      if (lb == null) {
+        _books.add(rb);
+        changed = true;
+      } else if (rb.updatedAt > lb.updatedAt) {
+        lb
+          ..title = rb.title
+          ..order = rb.order
+          ..coverPath = rb.coverPath
+          ..updatedAt = rb.updatedAt;
+        changed = true;
+      }
+    }
+
+    final trackById = {for (final t in _tracks) t.id: t};
+    for (final rt in remoteTracks) {
+      if ((_deleted[rt.id] ?? 0) >= rt.updatedAt) continue;
+      final lt = trackById[rt.id];
+      if (lt == null) {
+        _tracks.add(rt);
+        changed = true;
+      } else if (rt.updatedAt > lt.updatedAt) {
+        lt
+          ..bookId = rt.bookId
+          ..title = rt.title
+          ..order = rt.order
+          ..audioPath = rt.audioPath
+          ..bpm = rt.bpm
+          ..beatsPerBar = rt.beatsPerBar
+          ..timeSigDenominator = rt.timeSigDenominator
+          ..metronomeOn = rt.metronomeOn
+          ..syncOffsetMs = rt.syncOffsetMs
+          ..speed = rt.speed
+          ..done = rt.done
+          ..photoPaths = rt.photoPaths
+          ..updatedAt = rt.updatedAt;
+        changed = true;
+      }
+    }
+
+    // Apply tombstones to anything local that was deleted elsewhere later.
+    _books.removeWhere((b) {
+      final del = (_deleted[b.id] ?? 0) > b.updatedAt;
+      if (del) changed = true;
+      return del;
+    });
+    _tracks.removeWhere((t) {
+      final del = (_deleted[t.id] ?? 0) > t.updatedAt;
+      if (del) changed = true;
+      return del;
+    });
+
+    if (changed) {
+      _rehomePaths(); // normalise any merged paths into local dirs
+      await save();
+      notifyListeners();
+    }
+    return changed;
+  }
 
   /// Replace the whole catalog (used when loading from Drive) and persist.
   Future<void> replaceCatalog(List<Book> books, List<Track> tracks) async {
@@ -54,6 +163,7 @@ class LibraryStore extends ChangeNotifier {
     _tracks
       ..clear()
       ..addAll(tracks);
+    _deleted.clear(); // a full replace is a clean slate
     await save();
     notifyListeners();
   }
@@ -98,6 +208,10 @@ class LibraryStore extends ChangeNotifier {
       _tracks
         ..clear()
         ..addAll(trackList.map((e) => Track.fromJson(e as Map<String, dynamic>)));
+      _deleted
+        ..clear()
+        ..addAll(((data['deleted'] as Map?) ?? {})
+            .map((k, v) => MapEntry(k as String, (v as num).toInt())));
       _rehomePaths();
       await _migrateOrphans();
       await save(); // persist the corrected paths
@@ -145,6 +259,7 @@ class LibraryStore extends ChangeNotifier {
     final data = {
       'books': _books.map((b) => b.toJson()).toList(),
       'tracks': _tracks.map((t) => t.toJson()).toList(),
+      'deleted': _deleted,
     };
     await _dbFile.writeAsString(jsonEncode(data));
   }
@@ -156,6 +271,7 @@ class LibraryStore extends ChangeNotifier {
       id: _newId(),
       title: title.trim().isEmpty ? 'Untitled book' : title.trim(),
       order: _books.length,
+      updatedAt: _nowMs(),
     );
     _books.add(book);
     await save();
@@ -166,6 +282,7 @@ class LibraryStore extends ChangeNotifier {
   Future<void> renameBook(Book book, String title) async {
     if (title.trim().isEmpty) return;
     book.title = title.trim();
+    book.updatedAt = _nowMs();
     await save();
     notifyListeners();
   }
@@ -180,6 +297,7 @@ class LibraryStore extends ChangeNotifier {
       final dest = p.join(_coverDir.path, '${book.id}_${_newId()}$ext');
       await File(sourcePath).copy(dest);
       book.coverPath = dest;
+      book.updatedAt = _nowMs();
       await save();
       notifyListeners();
     } catch (e) {
@@ -190,6 +308,7 @@ class LibraryStore extends ChangeNotifier {
   Future<void> removeBookCover(Book book) async {
     await _removeCoverFile(book);
     book.coverPath = null;
+    book.updatedAt = _nowMs();
     await save();
     notifyListeners();
   }
@@ -204,11 +323,14 @@ class LibraryStore extends ChangeNotifier {
   }
 
   Future<void> deleteBook(Book book) async {
+    final ts = _nowMs();
     await _removeCoverFile(book);
     for (final t in tracksForBook(book.id)) {
       await _deleteTrackFiles(t);
+      _deleted[t.id] = ts;
       _tracks.remove(t);
     }
+    _deleted[book.id] = ts;
     _books.removeWhere((b) => b.id == book.id);
     await save();
     notifyListeners();
@@ -234,6 +356,7 @@ class LibraryStore extends ChangeNotifier {
           title: title,
           order: order == 0 ? existing + added + 1 : order,
           audioPath: dest,
+          updatedAt: _nowMs(),
         ));
         added++;
       } catch (e) {
@@ -248,11 +371,51 @@ class LibraryStore extends ChangeNotifier {
   }
 
   Future<void> updateTrack(Track t) async {
+    t.updatedAt = _nowMs();
+    await save();
+    notifyListeners();
+  }
+
+  /// Move a track within its book. [newIndex] is already adjusted for the
+  /// removed item (ReorderableListView's onReorderItem convention).
+  Future<void> reorderTracks(String bookId, int oldIndex, int newIndex) async {
+    final list = tracksForBook(bookId); // sorted by current order
+    if (oldIndex < 0 || oldIndex >= list.length) return;
+    newIndex = newIndex.clamp(0, list.length - 1);
+    if (newIndex == oldIndex) return;
+    final moved = list.removeAt(oldIndex);
+    list.insert(newIndex, moved);
+    final now = _nowMs();
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].order != i + 1) {
+        list[i].order = i + 1;
+        list[i].updatedAt = now; // so the new order syncs to other devices
+      }
+    }
+    await save();
+    notifyListeners();
+  }
+
+  /// Save a freshly recorded WAV as a new track in [bookId].
+  Future<void> addRecordedTrack(
+      String bookId, List<int> wavBytes, String title) async {
+    final id = _newId();
+    final dest = p.join(_audioDir.path, '$id.wav');
+    await File(dest).writeAsBytes(wavBytes);
+    _tracks.add(Track(
+      id: id,
+      bookId: bookId,
+      title: title.trim().isEmpty ? 'Recording' : title.trim(),
+      order: trackCount(bookId) + 1,
+      audioPath: dest,
+      updatedAt: _nowMs(),
+    ));
     await save();
     notifyListeners();
   }
 
   Future<void> deleteTrack(Track t) async {
+    _deleted[t.id] = _nowMs();
     _tracks.removeWhere((x) => x.id == t.id);
     await _deleteTrackFiles(t);
     await save();
@@ -278,12 +441,14 @@ class LibraryStore extends ChangeNotifier {
     final dest = p.join(_photoDir.path, '${_newId()}$ext');
     await File(sourcePath).copy(dest);
     t.photoPaths.add(dest);
+    t.updatedAt = _nowMs();
     await save();
     notifyListeners();
   }
 
   Future<void> removePhoto(Track t, String photoPath) async {
     t.photoPaths.remove(photoPath);
+    t.updatedAt = _nowMs();
     try {
       final f = File(photoPath);
       if (await f.exists()) await f.delete();

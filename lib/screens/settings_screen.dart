@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../services/drive_sync.dart';
 import '../services/library_store.dart';
+import '../services/metronome.dart';
 import '../ui/studio.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -25,7 +26,7 @@ class SettingsScreen extends StatelessWidget {
       for (final f in folders)
         StudioMenuAction(f.name,
             icon: Icons.folder_outlined,
-            onTap: () => drive.backup(lib, folderId: f.id)),
+            onTap: () => drive.backup(lib, folderId: f.id, folderName: f.name)),
     ]);
   }
 
@@ -47,7 +48,9 @@ class SettingsScreen extends StatelessWidget {
                   'Replaces your local catalog with this backup. Books and '
                   'tracks not in it will be removed from this device.',
               confirmLabel: 'Load');
-          if (ok) await drive.loadCatalog(lib, folderId: f.id);
+          if (ok) {
+            await drive.loadCatalog(lib, folderId: f.id, folderName: f.name);
+          }
         }),
     ]);
   }
@@ -55,6 +58,7 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final drive = context.watch<DriveSyncService>();
+    final m = context.watch<Metronome>();
 
     return StudioScaffold(
       title: 'Settings',
@@ -62,6 +66,37 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          const SectionLabel('Metronome', icon: Icons.av_timer),
+          const SizedBox(height: 12),
+          StudioCard(
+            child: Column(
+              children: [
+                _SettingToggle(
+                  icon: m.lockedToMusic
+                      ? Icons.lock_clock
+                      : Icons.lock_open_outlined,
+                  title: 'Lock click to music',
+                  subtitle: 'Beats follow the track so the click never drifts',
+                  value: m.lockedToMusic,
+                  onChanged: m.setLockedToMusic,
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Divider(color: Studio.line, height: 1),
+                ),
+                _SettingToggle(
+                  icon: m.visualEnabled
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  title: 'Visual metronome',
+                  subtitle: 'Animated pendulum that swings with the beat',
+                  value: m.visualEnabled,
+                  onChanged: m.setVisualEnabled,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 28),
           const SectionLabel('Google Drive Sync', icon: Icons.cloud_outlined),
           const SizedBox(height: 12),
           if (!drive.configured)
@@ -111,6 +146,77 @@ class SettingsScreen extends StatelessWidget {
                 ],
               ),
             ),
+            if (drive.isConnected) ...[
+              const SizedBox(height: 14),
+              StudioCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                            drive.autoSyncEnabled
+                                ? Icons.sync
+                                : Icons.sync_disabled,
+                            color: drive.autoSyncEnabled
+                                ? Studio.amber
+                                : Studio.textSecondary,
+                            size: 22),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Auto-sync (two-way)', style: Studio.title),
+                              SizedBox(height: 2),
+                              Text(
+                                  'Edits sync to Drive automatically and pull '
+                                  'changes from your other devices',
+                                  style: Studio.bodyDim),
+                            ],
+                          ),
+                        ),
+                        StudioSwitch(
+                          value: drive.autoSyncEnabled,
+                          onChanged: (v) => drive.setAutoSync(v),
+                        ),
+                      ],
+                    ),
+                    if (drive.autoSyncEnabled &&
+                        drive.autoSyncState.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Icon(Icons.circle,
+                              size: 8,
+                              color: drive.autoSyncState == 'Synced'
+                                  ? Studio.teal
+                                  : Studio.amber),
+                          const SizedBox(width: 8),
+                          Text(drive.autoSyncState, style: Studio.bodyDim),
+                        ],
+                      ),
+                    ],
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: Divider(color: Studio.line, height: 1),
+                    ),
+                    const Text(
+                      'How it works:\n'
+                      '• Your edits (done, BPM, photos, names…) upload to your '
+                      '"Metro Sound" Drive folder a few seconds after each change.\n'
+                      '• Changes from your other devices are pulled in about every '
+                      '30 seconds and merged — newest edit wins per item, so '
+                      'nothing gets silently overwritten.\n'
+                      '• Offline edits are saved and sync automatically once '
+                      "you're back online.\n"
+                      '• Turn this on with the same Google account on every device.',
+                      style: Studio.bodyDim,
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 14),
             StudioCard(
               child: Column(
@@ -139,9 +245,9 @@ class SettingsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'Backs up audio, photos, covers and progress to a '
-                    '"Metro Sound" folder in your Drive (a subfolder per book). '
-                    'Load replaces the local catalog.',
+                    'Backs up audio, photos, covers and progress into a '
+                    '"Metro Sound" folder (created inside the folder you pick, '
+                    'with a subfolder per book). Load replaces the local catalog.',
                     style: Studio.bodyDim,
                   ),
                 ],
@@ -174,6 +280,44 @@ class SettingsScreen extends StatelessWidget {
           const _About(),
         ],
       ),
+    );
+  }
+}
+
+/// A labeled on/off row used in the settings cards.
+class _SettingToggle extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  const _SettingToggle({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon,
+            color: value ? Studio.amber : Studio.textSecondary, size: 22),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: Studio.title),
+              const SizedBox(height: 2),
+              Text(subtitle, style: Studio.bodyDim),
+            ],
+          ),
+        ),
+        StudioSwitch(value: value, onChanged: onChanged),
+      ],
     );
   }
 }

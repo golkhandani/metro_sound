@@ -6,8 +6,10 @@ import '../models/book.dart';
 import '../models/track.dart';
 import '../services/audio_controller.dart';
 import '../services/library_store.dart';
+import '../services/recorder.dart';
 import '../ui/studio.dart';
 import 'player_screen.dart';
+import 'record_screen.dart';
 
 class BookScreen extends StatelessWidget {
   final Book book;
@@ -32,6 +34,12 @@ class BookScreen extends StatelessWidget {
         .push(MaterialPageRoute(builder: (_) => const PlayerScreen()));
   }
 
+  void _record(BuildContext context) {
+    Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) =>
+            RecordScreen(bookId: book.id, bookTitle: book.title)));
+  }
+
   @override
   Widget build(BuildContext context) {
     final library = context.watch<LibraryStore>();
@@ -49,21 +57,37 @@ class BookScreen extends StatelessWidget {
               tooltip: 'Play all',
               color: Studio.amber,
               onTap: () => _openPlayer(context, tracks, 0)),
+        if (Recorder.supported)
+          StudioIconButton(
+              icon: Icons.mic_none,
+              tooltip: 'Record a track',
+              onTap: () => _record(context)),
         StudioIconButton(
             icon: Icons.add,
             tooltip: 'Import audio',
             onTap: () => _import(context)),
       ],
       body: tracks.isEmpty
-          ? _Empty(onImport: () => _import(context))
+          ? _Empty(
+              onImport: () => _import(context),
+              onRecord:
+                  Recorder.supported ? () => _record(context) : null)
           : Column(
               children: [
                 _ProgressBar(done: done, total: tracks.length),
                 Expanded(
-                  child: ListView.builder(
+                  child: ReorderableListView.builder(
                     padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
+                    buildDefaultDragHandles: false,
                     itemCount: tracks.length,
+                    onReorderItem: (oldIndex, newIndex) => library
+                        .reorderTracks(book.id, oldIndex, newIndex),
+                    proxyDecorator: (child, index, anim) => Material(
+                      color: Colors.transparent,
+                      child: child,
+                    ),
                     itemBuilder: (context, i) => _TrackRow(
+                      key: ValueKey(tracks[i].id),
                       track: tracks[i],
                       index: i,
                       onOpen: () => _openPlayer(context, tracks, i),
@@ -117,7 +141,10 @@ class _TrackRow extends StatefulWidget {
   final int index;
   final VoidCallback onOpen;
   const _TrackRow(
-      {required this.track, required this.index, required this.onOpen});
+      {super.key,
+      required this.track,
+      required this.index,
+      required this.onOpen});
 
   @override
   State<_TrackRow> createState() => _TrackRowState();
@@ -251,6 +278,19 @@ class _TrackRowState extends State<_TrackRow> {
                   size: 20,
                   color: Studio.textSecondary,
                   onTap: _menu),
+              // Drag handle — only this grabs to reorder, so tapping the row
+              // still opens the player.
+              ReorderableDragStartListener(
+                index: widget.index,
+                child: const MouseRegion(
+                  cursor: SystemMouseCursors.grab,
+                  child: Padding(
+                    padding: EdgeInsets.only(left: 2),
+                    child: Icon(Icons.drag_handle,
+                        size: 20, color: Studio.textDim),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -261,7 +301,8 @@ class _TrackRowState extends State<_TrackRow> {
 
 class _Empty extends StatelessWidget {
   final VoidCallback onImport;
-  const _Empty({required this.onImport});
+  final VoidCallback? onRecord;
+  const _Empty({required this.onImport, this.onRecord});
 
   @override
   Widget build(BuildContext context) {
@@ -274,12 +315,26 @@ class _Empty extends StatelessWidget {
           const SizedBox(height: 16),
           const Text('No tracks yet', style: Studio.title),
           const SizedBox(height: 6),
-          const Text('Import mp3 files to get started.', style: Studio.bodyDim),
+          const Text('Import mp3 files or record a new one to get started.',
+              style: Studio.bodyDim),
           const SizedBox(height: 20),
-          StudioButton(
-              label: 'Import Audio',
-              icon: Icons.library_add_outlined,
-              onTap: onImport),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              StudioButton(
+                  label: 'Import Audio',
+                  icon: Icons.library_add_outlined,
+                  onTap: onImport),
+              if (onRecord != null) ...[
+                const SizedBox(width: 10),
+                StudioButton(
+                    label: 'Record',
+                    icon: Icons.mic_none,
+                    kind: StudioButtonKind.ghost,
+                    onTap: onRecord),
+              ],
+            ],
+          ),
         ],
       ),
     );
