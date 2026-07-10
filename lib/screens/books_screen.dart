@@ -6,7 +6,10 @@ import 'package:provider/provider.dart';
 
 import '../models/book.dart';
 import '../services/library_store.dart';
+import '../services/package_service.dart';
 import '../ui/studio.dart';
+import '../widgets/import_preview_sheet.dart';
+import '../widgets/package_progress_sheet.dart';
 import 'book_screen.dart';
 
 class BooksScreen extends StatelessWidget {
@@ -45,6 +48,20 @@ class BooksScreen extends StatelessWidget {
       }),
       StudioMenuAction(hasCover ? 'Change cover' : 'Add cover',
           icon: Icons.image_outlined, onTap: () => _setCover(context, book)),
+      StudioMenuAction('Share book', icon: Icons.ios_share, onTap: () async {
+        if (library.trackCount(book.id) == 0) {
+          showToast(context, 'This book has no tracks to share');
+          return;
+        }
+        final packages = context.read<PackageService>();
+        if (!await packages.startExportBooks([book])) {
+          if (context.mounted) {
+            showToast(context, 'Another export is already running');
+          }
+          return;
+        }
+        if (context.mounted) await showPackageProgressSheet(context);
+      }),
       if (hasCover)
         StudioMenuAction('Remove cover',
             icon: Icons.hide_image_outlined,
@@ -72,6 +89,10 @@ class BooksScreen extends StatelessWidget {
       title: 'Metro Sound',
       subtitle: 'Practice Library',
       actions: [
+        StudioIconButton(
+            icon: Icons.download_outlined,
+            tooltip: 'Import shared library',
+            onTap: () => runPackageImportFlow(context)),
         StudioIconButton(
             icon: Icons.add,
             tooltip: 'New book',
@@ -127,6 +148,7 @@ class _BookTile extends StatelessWidget {
     final hasCover = book.coverPath != null && File(book.coverPath!).existsSync();
     return Pressable(
       onTap: onOpen,
+      onLongPress: onMenu,
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         child: Column(

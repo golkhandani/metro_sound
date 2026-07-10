@@ -23,6 +23,18 @@ class Track {
   // Practice photos (absolute paths inside app storage)
   List<String> photoPaths;
 
+  /// The Google Drive file id this track was imported from, if any. Used to
+  /// avoid re-importing the same file when re-syncing a linked Drive folder.
+  String? driveId;
+
+  /// The id this track had in the library where it was first created — travels
+  /// inside shared packages so appending a package to an existing book can
+  /// skip tracks the recipient already has.
+  String? originId;
+
+  /// Stable share identity: original id if imported, else own id.
+  String get shareId => originId ?? id;
+
   /// Epoch-ms of the last local edit — used by two-way Drive sync to merge
   /// changes with last-write-wins per entity.
   int updatedAt;
@@ -41,6 +53,8 @@ class Track {
     this.speed = 1.0,
     this.done = false,
     this.updatedAt = 0,
+    this.driveId,
+    this.originId,
     List<String>? photoPaths,
   }) : photoPaths = photoPaths ?? [];
 
@@ -75,6 +89,8 @@ class Track {
         'speed': speed,
         'done': done,
         'updatedAt': updatedAt,
+        'driveId': driveId,
+        'originId': originId,
         'photoPaths': photoPaths,
       };
 
@@ -92,6 +108,8 @@ class Track {
         speed: (j['speed'] as num?)?.toDouble() ?? 1.0,
         done: j['done'] as bool? ?? false,
         updatedAt: (j['updatedAt'] as num?)?.toInt() ?? 0,
+        driveId: j['driveId'] as String?,
+        originId: j['originId'] as String?,
         photoPaths:
             (j['photoPaths'] as List?)?.map((e) => e as String).toList() ?? [],
       );

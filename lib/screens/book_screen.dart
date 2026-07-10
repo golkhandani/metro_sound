@@ -1,19 +1,39 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../models/book.dart';
 import '../models/track.dart';
 import '../services/audio_controller.dart';
 import '../services/library_store.dart';
+import '../services/package_service.dart';
 import '../services/recorder.dart';
 import '../ui/studio.dart';
+import '../widgets/package_progress_sheet.dart';
 import 'player_screen.dart';
 import 'record_screen.dart';
 
 class BookScreen extends StatelessWidget {
   final Book book;
   const BookScreen({super.key, required this.book});
+
+  /// Export this book in the background and show the progress sheet.
+  Future<void> _share(BuildContext context) async {
+    final library = context.read<LibraryStore>();
+    if (library.tracksForBook(book.id).isEmpty) {
+      showToast(context, 'Add some tracks before sharing');
+      return;
+    }
+    final packages = context.read<PackageService>();
+    if (!await packages.startExportBooks([book])) {
+      if (context.mounted) {
+        showToast(context, 'Another export is already running');
+      }
+      return;
+    }
+    if (context.mounted) await showPackageProgressSheet(context);
+  }
 
   Future<void> _import(BuildContext context) async {
     final library = context.read<LibraryStore>();
@@ -62,6 +82,10 @@ class BookScreen extends StatelessWidget {
               icon: Icons.mic_none,
               tooltip: 'Record a track',
               onTap: () => _record(context)),
+        StudioIconButton(
+            icon: Icons.ios_share,
+            tooltip: 'Share book',
+            onTap: () => _share(context)),
         StudioIconButton(
             icon: Icons.add,
             tooltip: 'Import audio',
@@ -170,6 +194,33 @@ class _TrackRowState extends State<_TrackRow> {
         t.done = !t.done;
         lib.updateTrack(t);
       }),
+      StudioMenuAction('Share track', icon: Icons.ios_share, onTap: () async {
+        // Package: audio + settings + photos, importable by Metro Sound users.
+        final parent = lib.books.where((b) => b.id == t.bookId).firstOrNull;
+        if (parent == null) return;
+        final packages = context.read<PackageService>();
+        if (!await packages.startExportTrack(parent, t)) {
+          if (mounted) {
+            showToast(context, 'Another export is already running');
+          }
+          return;
+        }
+        if (mounted) await showPackageProgressSheet(context);
+      }),
+      StudioMenuAction('Share audio file',
+          icon: Icons.audiotrack_outlined, onTap: () async {
+        // Raw audio for any app — instant, no packaging job.
+        try {
+          await Share.shareXFiles(
+            [XFile(t.audioPath)],
+            subject: t.title,
+            // The menu has already popped; use the safe fallback anchor.
+            sharePositionOrigin: const Rect.fromLTWH(0, 0, 100, 100),
+          );
+        } catch (e) {
+          if (mounted) showToast(context, 'Share failed: $e');
+        }
+      }),
       StudioMenuAction('Delete',
           icon: Icons.delete_outline,
           destructive: true, onTap: () async {
@@ -198,6 +249,10 @@ class _TrackRowState extends State<_TrackRow> {
         onTap: () {
           Haptics.impact();
           widget.onOpen();
+        },
+        onLongPress: () {
+          Haptics.impact();
+          _menu();
         },
         child: Container(
           margin: const EdgeInsets.only(bottom: 6),

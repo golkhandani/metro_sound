@@ -585,9 +585,14 @@ class StudioSwitch extends StatelessWidget {
 class Pressable extends StatefulWidget {
   final Widget child;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
   final bool haptic;
   const Pressable(
-      {super.key, required this.child, required this.onTap, this.haptic = true});
+      {super.key,
+      required this.child,
+      required this.onTap,
+      this.onLongPress,
+      this.haptic = true});
 
   @override
   State<Pressable> createState() => PressableState();
@@ -607,6 +612,13 @@ class PressableState extends State<Pressable> {
           if (widget.haptic) Haptics.tap();
           widget.onTap();
         },
+        onLongPress: widget.onLongPress == null
+            ? null
+            : () {
+                setState(() => _down = false);
+                if (widget.haptic) Haptics.impact();
+                widget.onLongPress!();
+              },
         child: AnimatedScale(
           scale: _down ? 0.96 : 1,
           duration: const Duration(milliseconds: 90),

@@ -10,6 +10,9 @@ import AVFoundation
   ) -> Bool {
     let didFinish = super.application(application, didFinishLaunchingWithOptions: launchOptions)
 
+    // flutter_local_notifications: deliver notification taps to the plugin.
+    UNUserNotificationCenter.current().delegate = self as? UNUserNotificationCenterDelegate
+
     // Microphone permission channel — flutter_audio_capture doesn't request it,
     // so the recorder asks through here before starting capture.
     if let controller = window?.rootViewController as? FlutterViewController {
