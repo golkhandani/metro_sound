@@ -29,14 +29,16 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.googleusercontent.apps.858515960931-vj1vgf6q8gevoc8cv472ft9gekkj17u8</string>
+				<string>com.googleusercontent.apps.1073445899746-1csq4pta44pl6dpiffa65efukupfi89n</string>
 			</array>
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>GIDClientID</key>
-	<string>858515960931-vj1vgf6q8gevoc8cv472ft9gekkj17u8.apps.googleusercontent.com</string>
+	<string>1073445899746-1csq4pta44pl6dpiffa65efukupfi89n.apps.googleusercontent.com</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
