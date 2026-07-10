@@ -54,6 +54,14 @@ class AppSettings extends ChangeNotifier {
   /// Quarter-tone divisions if microtones on (24), else 12.
   int get divisions => _microtones ? 24 : 12;
 
+  // First-run onboarding + one-time coach marks. Reinstalls wipe app-support,
+  // so a fresh install naturally shows everything again.
+  bool _onboardingDone = false;
+  bool get onboardingDone => _onboardingDone;
+
+  final Set<String> _seenTips = {};
+  bool tipSeen(String id) => _seenTips.contains(id);
+
   File? _file;
 
   Future<void> init() async {
@@ -72,6 +80,9 @@ class AppSettings extends ChangeNotifier {
             _accidental = Accidental.flats;
         }
         _microtones = j['microtones'] == true;
+        _onboardingDone = j['onboardingDone'] == true;
+        _seenTips
+            .addAll(((j['seenTips'] as List?) ?? const []).cast<String>());
       }
     } catch (e) {
       debugPrint('Settings load error: $e');
@@ -84,6 +95,8 @@ class AppSettings extends ChangeNotifier {
         'noteNaming': _noteNaming == NoteNaming.solfege ? 'solfege' : 'letters',
         'accidental': _accidental.name,
         'microtones': _microtones,
+        'onboardingDone': _onboardingDone,
+        'seenTips': _seenTips.toList(),
       }));
     } catch (_) {}
   }
@@ -105,6 +118,27 @@ class AppSettings extends ChangeNotifier {
   Future<void> setMicrotones(bool v) async {
     if (v == _microtones) return;
     _microtones = v;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setOnboardingDone(bool v) async {
+    if (v == _onboardingDone) return;
+    _onboardingDone = v;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> markTipSeen(String id) async {
+    if (!_seenTips.add(id)) return;
+    notifyListeners();
+    await _save();
+  }
+
+  /// Show the intro tour + all coach marks again (Settings → Replay tutorial).
+  Future<void> resetTutorial() async {
+    _onboardingDone = false;
+    _seenTips.clear();
     notifyListeners();
     await _save();
   }

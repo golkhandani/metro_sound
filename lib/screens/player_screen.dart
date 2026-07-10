@@ -11,6 +11,7 @@ import '../services/audio_controller.dart';
 import '../services/library_store.dart';
 import '../services/metronome.dart';
 import '../ui/studio.dart';
+import '../widgets/coach_marks.dart';
 import '../widgets/metronome_visual.dart';
 import 'photo_viewer_screen.dart';
 
@@ -87,27 +88,35 @@ class _PlayerScreenState extends State<PlayerScreen> {
     final track = audio.current;
     WidgetsBinding.instance.addPostFrameCallback((_) => _syncPreset(track));
 
-    return StudioScaffold(
-      title: track?.title ?? 'Player',
-      subtitle: 'Now Playing',
-      showBack: true,
-      bottomBar: track == null ? null : const _Transport(),
-      body: track == null
-          ? const Center(child: Text('No track loaded', style: Studio.bodyDim))
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _SpeedCard(onChanged: () => _save(track)),
-                const SizedBox(height: 12),
-                _MetronomeCard(onChanged: () => _save(track)),
-                const SizedBox(height: 12),
-                const _MixerCard(),
-                const SizedBox(height: 12),
-                _PhotosCard(track: track),
-                const SizedBox(height: 12),
-                _DoneCard(track: track),
-              ],
-            ),
+    return CoachTrigger(
+      screenId: 'player',
+      child: StudioScaffold(
+        title: track?.title ?? 'Player',
+        subtitle: 'Now Playing',
+        showBack: true,
+        bottomBar: track == null ? null : const _Transport(),
+        body: track == null
+            ? const Center(
+                child: Text('No track loaded', style: Studio.bodyDim),
+              )
+            : ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  KeyedSubtree(
+                    key: CoachKeys.playerSpeed,
+                    child: _SpeedCard(onChanged: () => _save(track)),
+                  ),
+                  const SizedBox(height: 12),
+                  _MetronomeCard(onChanged: () => _save(track)),
+                  const SizedBox(height: 12),
+                  const _MixerCard(),
+                  const SizedBox(height: 12),
+                  _PhotosCard(track: track),
+                  const SizedBox(height: 12),
+                  _DoneCard(track: track),
+                ],
+              ),
+      ),
     );
   }
 }
@@ -126,18 +135,25 @@ class _DoneCard extends StatelessWidget {
       color: done ? Studio.amberSoft : Studio.surface,
       child: Row(
         children: [
-          Icon(done ? Icons.verified : Icons.flag_outlined,
-              color: done ? Studio.amber : Studio.textSecondary, size: 22),
+          Icon(
+            done ? Icons.verified : Icons.flag_outlined,
+            color: done ? Studio.amber : Studio.textSecondary,
+            size: 22,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(done ? 'Lesson completed' : 'Mark lesson as completed',
-                    style: Studio.title),
+                Text(
+                  done ? 'Lesson completed' : 'Mark lesson as completed',
+                  style: Studio.title,
+                ),
                 const SizedBox(height: 2),
-                const Text('Tracks your progress through the book',
-                    style: Studio.bodyDim),
+                const Text(
+                  'Tracks your progress through the book',
+                  style: Studio.bodyDim,
+                ),
               ],
             ),
           ),
@@ -170,8 +186,11 @@ class _PhotosCard extends StatelessWidget {
   }
 
   void _open(BuildContext context, int i) {
-    Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => PhotoViewerScreen(track: track, initialIndex: i)));
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PhotoViewerScreen(track: track, initialIndex: i),
+      ),
+    );
   }
 
   @override
@@ -182,14 +201,17 @@ class _PhotosCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SectionLabel('Practice Photos',
-              icon: Icons.photo_camera_back_outlined,
-              trailing: photos.isNotEmpty
-                  ? StudioButton(
-                      label: 'View',
-                      kind: StudioButtonKind.outline,
-                      onTap: () => _open(context, 0))
-                  : null),
+          SectionLabel(
+            'Practice Photos',
+            icon: Icons.photo_camera_back_outlined,
+            trailing: photos.isNotEmpty
+                ? StudioButton(
+                    label: 'View',
+                    kind: StudioButtonKind.outline,
+                    onTap: () => _open(context, 0),
+                  )
+                : null,
+          ),
           const SizedBox(height: 12),
           SizedBox(
             height: 84,
@@ -209,8 +231,11 @@ class _PhotosCard extends StatelessWidget {
                         border: Border.all(color: Studio.line),
                       ),
                       child: const Center(
-                          child: Icon(Icons.add_a_photo_outlined,
-                              color: Studio.amber)),
+                        child: Icon(
+                          Icons.add_a_photo_outlined,
+                          color: Studio.amber,
+                        ),
+                      ),
                     ),
                   );
                 }
@@ -218,8 +243,12 @@ class _PhotosCard extends StatelessWidget {
                   onTap: () => _open(context, i),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(10),
-                    child: Image.file(File(photos[i]),
-                        width: 84, height: 84, fit: BoxFit.cover),
+                    child: Image.file(
+                      File(photos[i]),
+                      width: 84,
+                      height: 84,
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 );
               },
@@ -237,8 +266,7 @@ class _SpeedCard extends StatelessWidget {
   final VoidCallback onChanged;
   const _SpeedCard({required this.onChanged});
 
-  String _fmt(double s) =>
-      '${s == s.roundToDouble() ? s.toInt() : s}×';
+  String _fmt(double s) => '${s == s.roundToDouble() ? s.toInt() : s}×';
 
   @override
   Widget build(BuildContext context) {
@@ -277,18 +305,36 @@ class _MetronomeCard extends StatelessWidget {
 
   // (numerator, denominator) presets shown in the picker.
   static const _timeSigs = [
-    (2, 4), (3, 4), (4, 4), (5, 4), (6, 4), (7, 4),
-    (2, 2), (3, 8), (5, 8), (6, 8), (7, 8), (9, 8), (12, 8),
+    (2, 4),
+    (3, 4),
+    (4, 4),
+    (5, 4),
+    (6, 4),
+    (7, 4),
+    (2, 2),
+    (3, 8),
+    (5, 8),
+    (6, 8),
+    (7, 8),
+    (9, 8),
+    (12, 8),
   ];
 
   void _timeSig(BuildContext context, Metronome m) {
-    showStudioMenu(context, title: 'Time signature', actions: [
-      for (final (n, d) in _timeSigs)
-        StudioMenuAction('$n / $d', onTap: () {
-          m.setTimeSignature(n, d);
-          onChanged();
-        }),
-    ]);
+    showStudioMenu(
+      context,
+      title: 'Time signature',
+      actions: [
+        for (final (n, d) in _timeSigs)
+          StudioMenuAction(
+            '$n / $d',
+            onTap: () {
+              m.setTimeSignature(n, d);
+              onChanged();
+            },
+          ),
+      ],
+    );
   }
 
   @override
@@ -309,17 +355,23 @@ class _MetronomeCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _Stepper(icon: Icons.remove, onTap: () {
-                m.nudgeBpm(-1);
-                onChanged();
-              }),
+              _Stepper(
+                icon: Icons.remove,
+                onTap: () {
+                  m.nudgeBpm(-1);
+                  onChanged();
+                },
+              ),
               const SizedBox(width: 24),
               NumericReadout('${m.bpm}', unit: 'BPM', size: 44),
               const SizedBox(width: 24),
-              _Stepper(icon: Icons.add, onTap: () {
-                m.nudgeBpm(1);
-                onChanged();
-              }),
+              _Stepper(
+                icon: Icons.add,
+                onTap: () {
+                  m.nudgeBpm(1);
+                  onChanged();
+                },
+              ),
             ],
           ),
           StudioSlider(
@@ -336,28 +388,31 @@ class _MetronomeCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               StudioButton(
-                  label: 'Tap',
-                  icon: Icons.touch_app_outlined,
-                  kind: StudioButtonKind.ghost,
-                  onTap: m.tap),
+                label: 'Tap',
+                icon: Icons.touch_app_outlined,
+                kind: StudioButtonKind.ghost,
+                onTap: m.tap,
+              ),
               StudioButton(
-                  label: m.timeSigLabel,
-                  kind: StudioButtonKind.ghost,
-                  onTap: () => _timeSig(context, m)),
+                label: m.timeSigLabel,
+                kind: StudioButtonKind.ghost,
+                onTap: () => _timeSig(context, m),
+              ),
               StudioButton(
-                  label: m.running ? 'Stop' : 'Click',
-                  icon: m.running ? Icons.stop : Icons.play_arrow,
-                  onTap: () {
-                    m.toggle();
-                    onChanged();
-                  }),
+                label: m.running ? 'Stop' : 'Click',
+                icon: m.running ? Icons.stop : Icons.play_arrow,
+                onTap: () {
+                  m.toggle();
+                  onChanged();
+                },
+              ),
             ],
           ),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 14),
             child: Divider(color: Studio.line, height: 1),
           ),
-          const _LockRow(),
+          KeyedSubtree(key: CoachKeys.playerLock, child: const _LockRow()),
           const SizedBox(height: 14),
           const _VisualRow(),
           const SizedBox(height: 14),
@@ -401,8 +456,11 @@ class _VisualRow extends StatelessWidget {
     final on = m.visualEnabled;
     return Row(
       children: [
-        Icon(on ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-            color: on ? Studio.amber : Studio.textSecondary, size: 22),
+        Icon(
+          on ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+          color: on ? Studio.amber : Studio.textSecondary,
+          size: 22,
+        ),
         const SizedBox(width: 12),
         const Expanded(
           child: Column(
@@ -410,8 +468,10 @@ class _VisualRow extends StatelessWidget {
             children: [
               Text('Visual metronome', style: Studio.title),
               SizedBox(height: 2),
-              Text('Animated pendulum that swings with the beat',
-                  style: Studio.bodyDim),
+              Text(
+                'Animated pendulum that swings with the beat',
+                style: Studio.bodyDim,
+              ),
             ],
           ),
         ),
@@ -431,8 +491,11 @@ class _LockRow extends StatelessWidget {
     final on = m.lockedToMusic;
     return Row(
       children: [
-        Icon(on ? Icons.lock_clock : Icons.lock_open_outlined,
-            color: on ? Studio.amber : Studio.textSecondary, size: 22),
+        Icon(
+          on ? Icons.lock_clock : Icons.lock_open_outlined,
+          color: on ? Studio.amber : Studio.textSecondary,
+          size: 22,
+        ),
         const SizedBox(width: 12),
         const Expanded(
           child: Column(
@@ -440,8 +503,10 @@ class _LockRow extends StatelessWidget {
             children: [
               Text('Lock click to music', style: Studio.title),
               SizedBox(height: 2),
-              Text('Beats follow the track so the click never drifts',
-                  style: Studio.bodyDim),
+              Text(
+                'Beats follow the track so the click never drifts',
+                style: Studio.bodyDim,
+              ),
             ],
           ),
         ),
@@ -467,22 +532,27 @@ class _SyncRow extends StatelessWidget {
           children: [
             Text('SYNC OFFSET', style: Studio.label),
             const SizedBox(width: 10),
-            Text(label,
-                style: Studio.numeric(13,
-                    color: ms == 0 ? Studio.textSecondary : Studio.amber)),
+            Text(
+              label,
+              style: Studio.numeric(
+                13,
+                color: ms == 0 ? Studio.textSecondary : Studio.amber,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 4),
         Row(
           children: [
             StudioIconButton(
-                icon: Icons.remove,
-                size: 18,
-                color: Studio.amber,
-                onTap: () {
-                  m.nudgeSyncOffset(-5);
-                  onChanged();
-                }),
+              icon: Icons.remove,
+              size: 18,
+              color: Studio.amber,
+              onTap: () {
+                m.nudgeSyncOffset(-5);
+                onChanged();
+              },
+            ),
             Expanded(
               child: StudioSlider(
                 min: -500,
@@ -495,20 +565,22 @@ class _SyncRow extends StatelessWidget {
               ),
             ),
             StudioIconButton(
-                icon: Icons.add,
-                size: 18,
-                color: Studio.amber,
-                onTap: () {
-                  m.nudgeSyncOffset(5);
-                  onChanged();
-                }),
+              icon: Icons.add,
+              size: 18,
+              color: Studio.amber,
+              onTap: () {
+                m.nudgeSyncOffset(5);
+                onChanged();
+              },
+            ),
           ],
         ),
         Text(
-            m.lockedToMusic
-                ? 'Click is locked to the music position — nudge for fine alignment'
-                : 'Nudge until the click lines up with the music',
-            style: Studio.bodyDim),
+          m.lockedToMusic
+              ? 'Click is locked to the music position — nudge for fine alignment'
+              : 'Nudge until the click lines up with the music',
+          style: Studio.bodyDim,
+        ),
       ],
     );
   }
@@ -530,22 +602,24 @@ class _MixerCard extends StatelessWidget {
           const SectionLabel('Mixer', icon: Icons.tune),
           const SizedBox(height: 12),
           _Fader(
-              icon: Icons.music_note,
-              label: 'Music',
-              muted: audio.muted,
-              volume: audio.volume,
-              accent: Studio.amber,
-              onMute: audio.toggleMute,
-              onVolume: audio.setVolume),
+            icon: Icons.music_note,
+            label: 'Music',
+            muted: audio.muted,
+            volume: audio.volume,
+            accent: Studio.amber,
+            onMute: audio.toggleMute,
+            onVolume: audio.setVolume,
+          ),
           const SizedBox(height: 10),
           _Fader(
-              icon: Icons.av_timer,
-              label: 'Metronome',
-              muted: m.muted,
-              volume: m.volume,
-              accent: Studio.teal,
-              onMute: m.toggleMute,
-              onVolume: m.setVolume),
+            icon: Icons.av_timer,
+            label: 'Metronome',
+            muted: m.muted,
+            volume: m.volume,
+            accent: Studio.teal,
+            onMute: m.toggleMute,
+            onVolume: m.setVolume,
+          ),
         ],
       ),
     );
@@ -575,22 +649,26 @@ class _Fader extends StatelessWidget {
     return Row(
       children: [
         StudioIconButton(
-            icon: muted ? Icons.volume_off : icon,
-            size: 20,
-            color: muted ? Studio.red : accent,
-            onTap: onMute),
+          icon: muted ? Icons.volume_off : icon,
+          size: 20,
+          color: muted ? Studio.red : accent,
+          onTap: onMute,
+        ),
         SizedBox(width: 78, child: Text(label, style: Studio.body)),
         Expanded(
           child: StudioSlider(
-              value: muted ? 0 : volume,
-              accent: accent,
-              onChanged: muted ? null : onVolume),
+            value: muted ? 0 : volume,
+            accent: accent,
+            onChanged: muted ? null : onVolume,
+          ),
         ),
         SizedBox(
           width: 36,
-          child: Text('${(volume * 100).round()}',
-              textAlign: TextAlign.end,
-              style: Studio.numeric(12, color: Studio.textSecondary)),
+          child: Text(
+            '${(volume * 100).round()}',
+            textAlign: TextAlign.end,
+            style: Studio.numeric(12, color: Studio.textSecondary),
+          ),
         ),
       ],
     );
@@ -656,24 +734,30 @@ class _Transport extends StatelessWidget {
                 final maxMs = dur.inMilliseconds.toDouble();
                 return Row(
                   children: [
-                    Text(_fmt(pos),
-                        style:
-                            Studio.numeric(11, color: Studio.textSecondary)),
+                    Text(
+                      _fmt(pos),
+                      style: Studio.numeric(11, color: Studio.textSecondary),
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: _WaveformSeek(
-                        progress: maxMs == 0
-                            ? 0
-                            : (pos.inMilliseconds / maxMs).clamp(0.0, 1.0),
-                        seed: audio.current?.id ?? '',
-                        onSeek: (frac) =>
-                            audio.seek(Duration(milliseconds: (frac * maxMs).round())),
+                      child: KeyedSubtree(
+                        key: CoachKeys.playerWave,
+                        child: _WaveformSeek(
+                          progress: maxMs == 0
+                              ? 0
+                              : (pos.inMilliseconds / maxMs).clamp(0.0, 1.0),
+                          seed: audio.current?.id ?? '',
+                          onSeek: (frac) => audio.seek(
+                            Duration(milliseconds: (frac * maxMs).round()),
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),
-                    Text(_fmt(dur),
-                        style:
-                            Studio.numeric(11, color: Studio.textSecondary)),
+                    Text(
+                      _fmt(dur),
+                      style: Studio.numeric(11, color: Studio.textSecondary),
+                    ),
                   ],
                 );
               },
@@ -687,22 +771,25 @@ class _Transport extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       StudioIconButton(
-                          icon: Icons.replay,
-                          tooltip: 'Restart both from the top',
-                          onTap: restart),
+                        icon: Icons.replay,
+                        tooltip: 'Restart both from the top',
+                        onTap: restart,
+                      ),
                       const SizedBox(width: 10),
                       StudioIconButton(
-                          icon: Icons.skip_previous,
-                          size: 28,
-                          onTap: audio.prev),
+                        icon: Icons.skip_previous,
+                        size: 28,
+                        onTap: audio.prev,
+                      ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 16),
                 _PlayButton(
-                    playing: audio.isPlaying,
-                    metronome: metronome,
-                    onTap: togglePlay),
+                  playing: audio.isPlaying,
+                  metronome: metronome,
+                  onTap: togglePlay,
+                ),
                 const SizedBox(width: 16),
                 // Right controls, balanced against the left group.
                 Expanded(
@@ -710,9 +797,10 @@ class _Transport extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: [
                       StudioIconButton(
-                          icon: Icons.skip_next,
-                          size: 28,
-                          onTap: audio.hasNext ? audio.next : null),
+                        icon: Icons.skip_next,
+                        size: 28,
+                        onTap: audio.hasNext ? audio.next : null,
+                      ),
                     ],
                   ),
                 ),
@@ -729,8 +817,11 @@ class _PlayButton extends StatefulWidget {
   final bool playing;
   final Metronome metronome;
   final VoidCallback onTap;
-  const _PlayButton(
-      {required this.playing, required this.metronome, required this.onTap});
+  const _PlayButton({
+    required this.playing,
+    required this.metronome,
+    required this.onTap,
+  });
 
   @override
   State<_PlayButton> createState() => _PlayButtonState();
@@ -739,7 +830,9 @@ class _PlayButton extends StatefulWidget {
 class _PlayButtonState extends State<_PlayButton>
     with SingleTickerProviderStateMixin {
   late final AnimationController _pulse = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 320));
+    vsync: this,
+    duration: const Duration(milliseconds: 320),
+  );
   StreamSubscription<int>? _sub;
 
   @override
@@ -787,8 +880,11 @@ class _PlayButtonState extends State<_PlayButton>
               child: child,
             );
           },
-          child: Icon(widget.playing ? Icons.pause : Icons.play_arrow,
-              color: Studio.bg, size: 30),
+          child: Icon(
+            widget.playing ? Icons.pause : Icons.play_arrow,
+            color: Studio.bg,
+            size: 30,
+          ),
         ),
       ),
     );
@@ -804,8 +900,11 @@ class _WaveformSeek extends StatelessWidget {
   final double progress; // 0..1
   final String seed;
   final ValueChanged<double> onSeek;
-  const _WaveformSeek(
-      {required this.progress, required this.seed, required this.onSeek});
+  const _WaveformSeek({
+    required this.progress,
+    required this.seed,
+    required this.onSeek,
+  });
 
   @override
   Widget build(BuildContext context) {

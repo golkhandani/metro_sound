@@ -6,7 +6,9 @@ import '../services/drive_sync.dart';
 import '../services/library_store.dart';
 import '../services/metronome.dart';
 import '../services/package_service.dart';
+import '../services/settings.dart';
 import '../ui/studio.dart';
+import '../widgets/coach_marks.dart';
 import '../widgets/import_preview_sheet.dart';
 import '../widgets/package_progress_sheet.dart';
 
@@ -122,6 +124,7 @@ class SettingsScreen extends StatelessWidget {
           const SectionLabel('Metronome', icon: Icons.av_timer),
           const SizedBox(height: 12),
           StudioCard(
+            key: CoachKeys.settingsMetroCard,
             child: Column(
               children: [
                 _SettingToggle(
@@ -153,6 +156,7 @@ class SettingsScreen extends StatelessWidget {
           const SectionLabel('Share libraries', icon: Icons.ios_share),
           const SizedBox(height: 12),
           StudioCard(
+            key: CoachKeys.settingsShareCard,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -381,6 +385,42 @@ class SettingsScreen extends StatelessWidget {
                 ),
             ],
           ],
+          const SizedBox(height: 28),
+          const SectionLabel('Help', icon: Icons.help_outline),
+          const SizedBox(height: 12),
+          StudioCard(
+            padding: EdgeInsets.zero,
+            child: Pressable(
+              onTap: () => context.read<AppSettings>().resetTutorial(),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    const Icon(Icons.replay, color: Studio.amber, size: 22),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Replay tutorial', style: Studio.title),
+                          SizedBox(height: 2),
+                          Text(
+                            'Show the intro tour and on-screen tips again',
+                            style: Studio.bodyDim,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(
+                      Icons.chevron_right,
+                      color: Studio.textDim,
+                      size: 20,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
           const SizedBox(height: 28),
           const _About(),
         ],

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../services/tuner.dart';
 import '../ui/studio.dart';
+import '../widgets/coach_marks.dart';
 import 'books_screen.dart';
 import 'metronome_screen.dart';
 import 'settings_screen.dart';
@@ -21,6 +22,23 @@ class _RootShellState extends State<RootShell> {
   int _index = 0;
   static const _tunerTab = 2;
 
+  // Coach-mark ids per tab. The IndexedStack pre-builds every tab, so coach
+  // marks are driven from HERE (actual visibility), never from screen builds.
+  static const _screenIds = ['library', 'metronome', 'tuner', 'settings'];
+
+  @override
+  void initState() {
+    super.initState();
+    // First run: let the onboarding→shell fade settle, then coach the library.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 350), () {
+        if (mounted && _index == 0) {
+          CoachMarks.maybeShow(context, _screenIds[0]);
+        }
+      });
+    });
+  }
+
   void _select(int i) {
     if (i == _index) {
       return;
@@ -33,6 +51,13 @@ class _RootShellState extends State<RootShell> {
     } else {
       tuner.stop();
     }
+    // Coach the newly visible tab (re-check the index post-frame so rapid
+    // tab-hopping never spotlights a hidden screen).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _index == i) {
+        CoachMarks.maybeShow(context, _screenIds[i]);
+      }
+    });
   }
 
   @override

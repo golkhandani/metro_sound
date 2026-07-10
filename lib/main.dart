@@ -9,6 +9,7 @@ import 'services/metronome.dart';
 import 'services/package_service.dart';
 import 'services/settings.dart';
 import 'services/tuner.dart';
+import 'screens/onboarding_screen.dart';
 import 'screens/root_shell.dart';
 import 'ui/studio.dart';
 import 'widgets/package_job_overlay.dart';
@@ -83,8 +84,23 @@ class MetroSoundApp extends StatelessWidget {
             const PackageJobOverlay(),
           ],
         ),
-        home: const RootShell(),
+        home: const _Home(),
       ),
+    );
+  }
+}
+
+/// Gate: first launch shows the onboarding tour; afterwards the tab shell.
+/// Reactive, so Settings → Replay tutorial swaps back instantly.
+class _Home extends StatelessWidget {
+  const _Home();
+
+  @override
+  Widget build(BuildContext context) {
+    final done = context.select<AppSettings, bool>((s) => s.onboardingDone);
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 350),
+      child: done ? const RootShell() : const OnboardingScreen(),
     );
   }
 }

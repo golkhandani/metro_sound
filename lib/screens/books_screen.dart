@@ -8,6 +8,7 @@ import '../models/book.dart';
 import '../services/library_store.dart';
 import '../services/package_service.dart';
 import '../ui/studio.dart';
+import '../widgets/coach_marks.dart';
 import '../widgets/import_preview_sheet.dart';
 import '../widgets/package_progress_sheet.dart';
 import 'book_screen.dart';
@@ -89,14 +90,20 @@ class BooksScreen extends StatelessWidget {
       title: 'Metro Sound',
       subtitle: 'Practice Library',
       actions: [
-        StudioIconButton(
-            icon: Icons.download_outlined,
-            tooltip: 'Import shared library',
-            onTap: () => runPackageImportFlow(context)),
-        StudioIconButton(
-            icon: Icons.add,
-            tooltip: 'New book',
-            onTap: () => _createBook(context)),
+        KeyedSubtree(
+          key: CoachKeys.booksImport,
+          child: StudioIconButton(
+              icon: Icons.download_outlined,
+              tooltip: 'Import shared library',
+              onTap: () => runPackageImportFlow(context)),
+        ),
+        KeyedSubtree(
+          key: CoachKeys.booksNewBook,
+          child: StudioIconButton(
+              icon: Icons.add,
+              tooltip: 'New book',
+              onTap: () => _createBook(context)),
+        ),
       ],
       body: !library.ready
           ? const Center(
@@ -116,6 +123,7 @@ class BooksScreen extends StatelessWidget {
                   itemBuilder: (context, i) {
                     final book = books[i];
                     return _BookTile(
+                      key: i == 0 ? CoachKeys.booksFirstTile : null,
                       book: book,
                       total: library.trackCount(book.id),
                       done: library.doneCount(book.id),
@@ -136,6 +144,7 @@ class _BookTile extends StatelessWidget {
   final VoidCallback onOpen;
   final VoidCallback onMenu;
   const _BookTile({
+    super.key,
     required this.book,
     required this.total,
     required this.done,

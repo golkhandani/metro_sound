@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../services/metronome.dart';
 import '../ui/studio.dart';
+import '../widgets/coach_marks.dart';
 import '../widgets/metronome_visual.dart';
 
 /// Standalone metronome page (separate from the player). Uses the shared
@@ -79,25 +80,34 @@ class _MetronomeScreenState extends State<MetronomeScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          StudioSlider(
-            min: 20,
-            max: 300,
-            value: m.bpm.toDouble(),
-            onChanged: (v) => m.setBpm(v.round()),
+          KeyedSubtree(
+            key: CoachKeys.metroBpm,
+            child: StudioSlider(
+              min: 20,
+              max: 300,
+              value: m.bpm.toDouble(),
+              onChanged: (v) => m.setBpm(v.round()),
+            ),
           ),
           const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              StudioButton(
-                  label: 'Tap',
-                  icon: Icons.touch_app_outlined,
-                  kind: StudioButtonKind.ghost,
-                  onTap: m.tap),
-              StudioButton(
-                  label: m.timeSigLabel,
-                  kind: StudioButtonKind.ghost,
-                  onTap: () => _timeSig(m)),
+              KeyedSubtree(
+                key: CoachKeys.metroTap,
+                child: StudioButton(
+                    label: 'Tap',
+                    icon: Icons.touch_app_outlined,
+                    kind: StudioButtonKind.ghost,
+                    onTap: m.tap),
+              ),
+              KeyedSubtree(
+                key: CoachKeys.metroTimeSig,
+                child: StudioButton(
+                    label: m.timeSigLabel,
+                    kind: StudioButtonKind.ghost,
+                    onTap: () => _timeSig(m)),
+              ),
             ],
           ),
           const SizedBox(height: 28),

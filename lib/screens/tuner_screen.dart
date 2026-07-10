@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../services/settings.dart';
 import '../services/tuner.dart';
 import '../ui/studio.dart';
+import '../widgets/coach_marks.dart';
 
 const Color _green = Color(0xFF35D06A);
 
@@ -81,14 +82,17 @@ class _TunerScreenState extends State<TunerScreen> {
             _StatusLine(tuner: t),
             const SizedBox(height: 24),
             // Needle gauge
-            SizedBox(
-              width: 300,
-              height: 180,
-              child: CustomPaint(
-                painter: _GaugePainter(
-                  cents: t.needle,
-                  inTune: t.inTune,
-                  active: t.hasReading,
+            KeyedSubtree(
+              key: CoachKeys.tunerGauge,
+              child: SizedBox(
+                width: 300,
+                height: 180,
+                child: CustomPaint(
+                  painter: _GaugePainter(
+                    cents: t.needle,
+                    inTune: t.inTune,
+                    active: t.hasReading,
+                  ),
                 ),
               ),
             ),
@@ -99,7 +103,10 @@ class _TunerScreenState extends State<TunerScreen> {
               style: Studio.numeric(16, color: Studio.textSecondary),
             ),
             const SizedBox(height: 24),
-            _NotationControls(settings: settings),
+            KeyedSubtree(
+              key: CoachKeys.tunerNotation,
+              child: _NotationControls(settings: settings),
+            ),
             const SizedBox(height: 16),
             _MicState(tuner: t),
           ],
