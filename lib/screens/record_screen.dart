@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import '../services/library_store.dart';
 import '../services/metronome.dart';
 import '../services/recorder.dart';
+import '../services/tuner.dart';
 import '../ui/studio.dart';
 
 /// Full recording studio: record / pause / stop / reset, a count-in and
@@ -71,17 +72,20 @@ class _RecordScreenState extends State<RecordScreen> {
   // ─── Transport ───
 
   Future<void> _record() async {
+    // The tuner shares the one native mic engine — make sure it's released.
+    context.read<Tuner>().stop();
     if (_countIn) {
       await _runCountIn();
       if (!mounted) return;
     }
+    // Release the playback session the metronome held, let it settle, then claim
+    // the mic for recording.
+    _metro.stop();
+    await Future.delayed(const Duration(milliseconds: 120));
     final ok = await _rec.start();
     if (!ok) return;
-    if (_clickWhileRecording) {
-      if (!_metro.running) _metro.start();
-    } else {
-      _metro.stop();
-    }
+    // Resume the click now that capture owns the audio session.
+    if (_clickWhileRecording && mounted) _metro.start();
   }
 
   Future<void> _runCountIn() async {
@@ -98,7 +102,7 @@ class _RecordScreenState extends State<RecordScreen> {
     final beatMs = (60000 / (_metro.bpm <= 0 ? 60 : _metro.bpm)).round();
     await Future.delayed(Duration(milliseconds: beatMs * beats));
     await sub.cancel();
-    if (!_clickWhileRecording) _metro.stop();
+    // _record() stops the metronome and reclaims the session after this.
     if (mounted) setState(() => _counting = false);
   }
 

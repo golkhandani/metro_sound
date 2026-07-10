@@ -16,7 +16,6 @@ class Recorder extends ChangeNotifier {
   static const _micChannel = MethodChannel('metro_sound/mic');
 
   final FlutterAudioCapture _capture = FlutterAudioCapture();
-  bool _inited = false;
 
   RecState _state = RecState.idle;
   String? _error;
@@ -84,30 +83,42 @@ class Recorder extends ChangeNotifier {
   }
 
   Future<bool> _beginCapture() async {
-    try {
-      if (!_inited) {
+    // Re-establish the record audio session every time. The metronome (used for
+    // count-in / click) plays through audioplayers and leaves the iOS session in
+    // a playback state; re-initialising reclaims it for recording so the mic
+    // engine doesn't intermittently fail with "listen failed".
+    Future<bool> attempt() async {
+      try {
         await _capture.init();
-        _inited = true;
+        _error = null;
+        await _capture.start(
+          _onData,
+          (Object e) {
+            _error = '$e';
+            notifyListeners();
+          },
+          sampleRate: _sampleRate,
+          bufferSize: 3000,
+        );
+        return true;
+      } catch (e) {
+        _error = '$e';
+        debugPrint('Recorder start error: $e');
+        return false;
       }
-      _error = null;
-      await _capture.start(
-        _onData,
-        (Object e) {
-          _error = '$e';
-          notifyListeners();
-        },
-        sampleRate: _sampleRate,
-        bufferSize: 3000,
-      );
-      _state = RecState.recording;
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _error = '$e';
-      debugPrint('Recorder start error: $e');
-      notifyListeners();
-      return false;
     }
+
+    var ok = await attempt();
+    if (!ok) {
+      // One retry after a short settle — clears transient session races.
+      await Future.delayed(const Duration(milliseconds: 250));
+      ok = await attempt();
+    }
+    if (ok) {
+      _state = RecState.recording;
+    }
+    notifyListeners();
+    return ok;
   }
 
   Future<void> pause() async {

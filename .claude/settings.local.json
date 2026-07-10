@@ -60,7 +60,10 @@
       "Bash(kill 9184)",
       "Bash(pkill -f \"Release/Metro Sound\")",
       "Bash(open \"build/macos/Build/Products/Release/Metro Sound.app\")",
-      "Bash(/usr/libexec/PlistBuddy -c \"Set :NSMicrophoneUsageDescription 'Metro Sound uses the microphone to tune your instrument and record practice tracks.'\" ios/Runner/Info.plist)"
+      "Bash(/usr/libexec/PlistBuddy -c \"Set :NSMicrophoneUsageDescription 'Metro Sound uses the microphone to tune your instrument and record practice tracks.'\" ios/Runner/Info.plist)",
+      "Bash(flutter pub *)",
+      "Bash(flutter config *)",
+      "Bash(flutter create *)"
     ]
   }
 }
