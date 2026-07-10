@@ -98,6 +98,22 @@ class Metronome extends ChangeNotifier {
 
   Future<void> init() async {
     try {
+      // The clicks share one audio session with the just_audio music player.
+      // audioplayers' DEFAULT context takes exclusive playback focus, so every
+      // click (re)activated the session against the music — metronome use
+      // audibly disturbed other audio. Make the click players cooperative:
+      // mix with other audio on iOS, take no audio focus on Android.
+      await AudioPlayer.global.setAudioContext(AudioContext(
+        iOS: AudioContextIOS(
+          category: AVAudioSessionCategory.playback,
+          options: const {AVAudioSessionOptions.mixWithOthers},
+        ),
+        android: const AudioContextAndroid(
+          contentType: AndroidContentType.sonification,
+          usageType: AndroidUsageType.media,
+          audioFocus: AndroidAudioFocus.none,
+        ),
+      ));
       for (final pl in [_accent, _click]) {
         await pl.setReleaseMode(ReleaseMode.stop); // keep source ready for replay
       }

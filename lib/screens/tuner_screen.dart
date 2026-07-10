@@ -229,6 +229,15 @@ class _GaugePainter extends CustomPainter {
   _GaugePainter(
       {required this.cents, required this.inTune, required this.active});
 
+  /// Non-linear scale: expands the center and compresses the edges, so the
+  /// few cents around "in tune" get most of the dial (like pro tuners).
+  /// asinh-based, symmetric, monotonic: ±5¢ ≈ 26% of each side, ±10¢ ≈ 45%.
+  static double _warp(double x) {
+    const k = 8.0;
+    double asinh(double y) => math.log(y + math.sqrt(y * y + 1));
+    return x.sign * asinh(k * x.abs()) / asinh(k);
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;
@@ -251,25 +260,46 @@ class _GaugePainter extends CustomPainter {
         ..color = Studio.line,
     );
 
-    // Ticks every 5 cents (major every 10)
-    for (int c = -50; c <= 50; c += 5) {
-      final a = c / 50 * _maxA;
+    // Highlight the (now wide) in-tune zone on the band.
+    final zone = _warp(5 / 50) * _maxA;
+    canvas.drawArc(
+      rect,
+      -math.pi / 2 - zone,
+      2 * zone,
+      false,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3
+        ..strokeCap = StrokeCap.round
+        ..color = _green.withValues(alpha: 0.45),
+    );
+
+    void tick(int c, {required bool major, bool fine = false}) {
+      final a = _warp(c / 50) * _maxA;
       final dir = Offset(math.sin(a), -math.cos(a));
-      final major = c % 10 == 0;
       final inTuneTick = c.abs() <= 5;
-      final inner = r - (major ? 18 : 10);
+      final inner = r - (major ? 18 : (fine ? 7 : 10));
       canvas.drawLine(
         pivot + dir * inner,
         pivot + dir * r,
         Paint()
           ..color = inTuneTick ? _green : Studio.textDim
-          ..strokeWidth = major ? 2.5 : 1.5
+          ..strokeWidth = major ? 2.5 : (fine ? 1.0 : 1.5)
           ..strokeCap = StrokeCap.round,
       );
     }
 
+    // Coarse ticks every 5 cents (major every 10)…
+    for (int c = -50; c <= 50; c += 5) {
+      tick(c, major: c % 10 == 0);
+    }
+    // …plus fine 2¢ ticks in the expanded center, where the room is.
+    for (int c = -8; c <= 8; c += 2) {
+      if (c % 5 != 0 && c != 0) tick(c, major: false, fine: true);
+    }
+
     // Needle
-    final na = (cents / 50).clamp(-1.0, 1.0) * _maxA;
+    final na = _warp((cents / 50).clamp(-1.0, 1.0)) * _maxA;
     final ndir = Offset(math.sin(na), -math.cos(na));
     final tip = pivot + ndir * (r - 6);
     canvas.drawLine(
