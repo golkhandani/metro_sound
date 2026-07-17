@@ -41,6 +41,8 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Metro Sound uses the camera to photograph sheet music and attach it to a lesson.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Metro Sound uses the microphone to tune your instrument and record practice tracks.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
