@@ -8,8 +8,6 @@ import '../services/tuner.dart';
 import '../ui/studio.dart';
 import '../widgets/coach_marks.dart';
 
-const Color _green = Color(0xFF35D06A);
-
 class TunerScreen extends StatefulWidget {
   const TunerScreen({super.key});
 
@@ -27,7 +25,7 @@ class _TunerScreenState extends State<TunerScreen> {
     final settings = context.watch<AppSettings>();
     // Keep the detector's grid in sync with the microtones setting.
     t.setDivisions(settings.divisions);
-    final accent = t.inTune ? _green : Studio.amber;
+    final accent = t.inTune ? Studio.green : Studio.amber;
     final name = settings.noteName(t.noteIndex);
     // Bright when a note is sounding (live); dimmed when holding the last
     // reading after the sound stops; faded when nothing has been read.
@@ -60,8 +58,9 @@ class _TunerScreenState extends State<TunerScreen> {
                           shadows: t.live
                               ? [
                                   Shadow(
-                                      color: accent.withValues(alpha: 0.5),
-                                      blurRadius: 28)
+                                    color: accent.withValues(alpha: 0.5),
+                                    blurRadius: 28,
+                                  ),
                                 ]
                               : null,
                         ),
@@ -69,8 +68,10 @@ class _TunerScreenState extends State<TunerScreen> {
                       if (t.noteIndex >= 0)
                         Padding(
                           padding: const EdgeInsets.only(top: 12, left: 4),
-                          child: Text('${t.octave}',
-                              style: Studio.numeric(28, color: noteColor)),
+                          child: Text(
+                            '${t.octave}',
+                            style: Studio.numeric(28, color: noteColor),
+                          ),
                         ),
                     ],
                   ),
@@ -78,8 +79,9 @@ class _TunerScreenState extends State<TunerScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            // Status line
-            _StatusLine(tuner: t),
+            // Status line (fixed height: its variants use different font
+            // sizes, and any change would shift the gauge below).
+            SizedBox(height: 22, child: Center(child: _StatusLine(tuner: t))),
             const SizedBox(height: 24),
             // Needle gauge
             KeyedSubtree(
@@ -87,11 +89,18 @@ class _TunerScreenState extends State<TunerScreen> {
               child: SizedBox(
                 width: 300,
                 height: 180,
-                child: CustomPaint(
-                  painter: _GaugePainter(
-                    cents: t.needle,
-                    inTune: t.inTune,
-                    active: t.hasReading,
+                // Pitch updates arrive in discrete chunks; the tween glides
+                // the needle between them so it sweeps instead of jumping.
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(end: t.needle),
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOut,
+                  builder: (context, needle, _) => CustomPaint(
+                    painter: _GaugePainter(
+                      cents: needle,
+                      inTune: t.inTune,
+                      active: t.hasReading,
+                    ),
                   ),
                 ),
               ),
@@ -147,11 +156,15 @@ class _NotationControls extends StatelessWidget {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('QUARTER-TONES (KORON/SORI)',
-                style: Studio.label.copyWith(fontSize: 10)),
+            Text(
+              'QUARTER-TONES (KORON/SORI)',
+              style: Studio.label.copyWith(fontSize: 10),
+            ),
             const SizedBox(width: 10),
             StudioSwitch(
-                value: settings.microtones, onChanged: settings.setMicrotones),
+              value: settings.microtones,
+              onChanged: settings.setMicrotones,
+            ),
           ],
         ),
       ],
@@ -166,34 +179,45 @@ class _StatusLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!tuner.hasReading) {
-      return const Text('PLAY A NOTE',
-          style: TextStyle(
-              fontSize: 12,
-              letterSpacing: 2,
-              color: Studio.textDim,
-              fontWeight: FontWeight.w700));
+      return Text(
+        'PLAY A NOTE',
+        style: TextStyle(
+          fontSize: 12,
+          letterSpacing: 2,
+          color: Studio.textDim,
+          fontWeight: FontWeight.w700,
+        ),
+      );
     }
     if (tuner.inTune) {
-      return Text(tuner.live ? 'IN TUNE' : 'IN TUNE  ·  HOLD',
-          style: const TextStyle(
-              fontSize: 13,
-              letterSpacing: 2,
-              color: _green,
-              fontWeight: FontWeight.w800));
+      return Text(
+        tuner.live ? 'IN TUNE' : 'IN TUNE  ·  HOLD',
+        style: TextStyle(
+          fontSize: 13,
+          letterSpacing: 2,
+          color: Studio.green,
+          fontWeight: FontWeight.w800,
+        ),
+      );
     }
     final sharp = tuner.cents > 0;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(sharp ? '♯ SHARP' : '♭ FLAT',
-            style: const TextStyle(
-                fontSize: 12,
-                letterSpacing: 2,
-                color: Studio.amber,
-                fontWeight: FontWeight.w700)),
+        Text(
+          sharp ? '♯ SHARP' : '♭ FLAT',
+          style: TextStyle(
+            fontSize: 12,
+            letterSpacing: 2,
+            color: Studio.amber,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
         const SizedBox(width: 10),
-        Text('${tuner.cents > 0 ? '+' : ''}${tuner.cents}¢',
-            style: Studio.numeric(14, color: Studio.amber)),
+        Text(
+          '${tuner.cents > 0 ? '+' : ''}${tuner.cents}¢',
+          style: Studio.numeric(14, color: Studio.amber),
+        ),
       ],
     );
   }
@@ -208,20 +232,23 @@ class _MicState extends StatelessWidget {
     if (tuner.error != null) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),
-        child: Text(tuner.error!,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 12, color: Studio.red)),
+        child: Text(
+          tuner.error!,
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 12, color: Studio.red),
+        ),
       );
     }
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(tuner.listening ? Icons.mic : Icons.mic_off,
-            size: 14,
-            color: tuner.listening ? Studio.amber : Studio.textDim),
+        Icon(
+          tuner.listening ? Icons.mic : Icons.mic_off,
+          size: 14,
+          color: tuner.listening ? Studio.amber : Studio.textDim,
+        ),
         const SizedBox(width: 6),
-        Text(tuner.listening ? 'Listening…' : 'Mic off',
-            style: Studio.bodyDim),
+        Text(tuner.listening ? 'Listening…' : 'Mic off', style: Studio.bodyDim),
       ],
     );
   }
@@ -233,14 +260,17 @@ class _GaugePainter extends CustomPainter {
   final bool active;
   static const double _maxA = 50 * math.pi / 180; // ±50° sweep
 
-  _GaugePainter(
-      {required this.cents, required this.inTune, required this.active});
+  _GaugePainter({
+    required this.cents,
+    required this.inTune,
+    required this.active,
+  });
 
   /// Non-linear scale: expands the center and compresses the edges, so the
   /// few cents around "in tune" get most of the dial (like pro tuners).
-  /// asinh-based, symmetric, monotonic: ±5¢ ≈ 26% of each side, ±10¢ ≈ 45%.
+  /// asinh-based, symmetric, monotonic: ±5¢ ≈ 32% of each side, ±10¢ ≈ 50%.
   static double _warp(double x) {
-    const k = 8.0;
+    const k = 12.0;
     double asinh(double y) => math.log(y + math.sqrt(y * y + 1));
     return x.sign * asinh(k * x.abs()) / asinh(k);
   }
@@ -251,8 +281,9 @@ class _GaugePainter extends CustomPainter {
     final h = size.height;
     final pivot = Offset(w / 2, h - 6);
     final r = h * 0.92;
-    final color =
-        inTune ? _green : (active ? Studio.amber : Studio.textDim);
+    final color = inTune
+        ? Studio.green
+        : (active ? Studio.amber : Studio.textDim);
 
     // Arc band
     final rect = Rect.fromCircle(center: pivot, radius: r);
@@ -278,7 +309,7 @@ class _GaugePainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3
         ..strokeCap = StrokeCap.round
-        ..color = _green.withValues(alpha: 0.45),
+        ..color = Studio.green.withValues(alpha: 0.45),
     );
 
     void tick(int c, {required bool major, bool fine = false}) {
@@ -290,7 +321,7 @@ class _GaugePainter extends CustomPainter {
         pivot + dir * inner,
         pivot + dir * r,
         Paint()
-          ..color = inTuneTick ? _green : Studio.textDim
+          ..color = inTuneTick ? Studio.green : Studio.textDim
           ..strokeWidth = major ? 2.5 : (fine ? 1.0 : 1.5)
           ..strokeCap = StrokeCap.round,
       );
@@ -327,8 +358,7 @@ class _GaugePainter extends CustomPainter {
         ..strokeCap = StrokeCap.round,
     );
     canvas.drawCircle(pivot, 8, Paint()..color = color);
-    canvas.drawCircle(
-        pivot, 3, Paint()..color = Studio.bg);
+    canvas.drawCircle(pivot, 3, Paint()..color = Studio.bg);
   }
 
   @override

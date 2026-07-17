@@ -15,15 +15,19 @@ class Tuner extends ChangeNotifier {
   static const int _sampleRate = 44100;
   static const int _bufferSize = 2048;
 
-  final FlutterAudioCapture _capture = FlutterAudioCapture();
+  // Recreated on every start(): the plugin's init() is once-per-instance, and
+  // it's the ONLY call that puts the AVAudioSession back into a record-capable
+  // category. Leaving the tab restores a playback session (for normal volume),
+  // so a stale instance skips setup and the mic engine reports a dead 0 Hz
+  // input ("Invalid sample rate"). A fresh instance re-runs the native setup.
+  FlutterAudioCapture _capture = FlutterAudioCapture();
   final PitchDetector _detector = PitchDetector(
-    audioSampleRate: _sampleRate * 1.0,
+    audioSampleRate: _sampleRate.toDouble(),
     bufferSize: _bufferSize,
   );
 
   final List<double> _buf = [];
   bool _processing = false;
-  bool _inited = false;
   bool _wasInTune = false;
 
   // 12 = semitones, 24 = Persian quarter-tones (set from settings).
@@ -70,33 +74,76 @@ class Tuner extends ChangeNotifier {
   Future<void> start() async {
     if (_listening) return;
     if (!supported) {
-      _error = 'The tuner needs a microphone — open Metro Sound on your '
+      _error =
+          'The tuner needs a microphone — open Metro Sound on your '
           'iPhone or iPad to tune.';
       notifyListeners();
       return;
     }
-    try {
-      if (!_inited) {
-        await _capture.init();
-        _inited = true;
+    // A fresh plugin instance per attempt: init() runs once per instance and
+    // is what re-establishes the record session (leaving the tab restores the
+    // playback session for normal volume, which kills mic input). Failures can
+    // arrive via the ERROR CALLBACK rather than a thrown exception, so each
+    // attempt watches the callback during a short probation window.
+    Object? lastError;
+    Future<bool> attempt() async {
+      Object? callbackError;
+      var probing = true;
+      try {
+        // Release any half-started engine from a previous attempt, then
+        // rebuild so init() truly re-runs the native session setup.
+        try {
+          await _capture.stop();
+        } catch (_) {}
+        _capture = FlutterAudioCapture();
+        final inited = await _capture.init();
+        if (inited != true) {
+          lastError = 'audio session init failed';
+          return false;
+        }
+        await _capture.start(
+          _onData,
+          (Object e) {
+            if (probing) {
+              // Swallow during the probe — a retried start isn't user-facing.
+              callbackError ??= e;
+            } else {
+              _error = '$e';
+              notifyListeners();
+            }
+          },
+          sampleRate: _sampleRate,
+          bufferSize: _bufferSize,
+        );
+      } catch (e) {
+        debugPrint('Tuner start threw: $e');
+        lastError = e;
+        return false;
       }
-      await _capture.start(
-        _onData,
-        (Object e) {
-          _error = '$e';
-          notifyListeners();
-        },
-        sampleRate: _sampleRate,
-        bufferSize: _bufferSize,
-      );
+      // Probation: give the engine a beat to report an async failure.
+      await Future.delayed(const Duration(milliseconds: 300));
+      probing = false;
+      if (callbackError != null) {
+        debugPrint('Tuner start failed via callback: $callbackError');
+        lastError = callbackError;
+        return false;
+      }
+      return true;
+    }
+
+    var ok = false;
+    for (var tries = 0; tries < 2 && !ok; tries++) {
+      ok = await attempt();
+    }
+    if (ok) {
       _error = null;
       _listening = true;
-      notifyListeners();
-    } catch (e) {
-      _error = '$e';
-      debugPrint('Tuner start error: $e');
-      notifyListeners();
+    } else {
+      _error = 'Couldn\'t start the microphone'
+          '${lastError != null ? ' ($lastError)' : ''}. '
+          'Leave and re-open the Tuner tab to try again.';
     }
+    notifyListeners();
   }
 
   Future<void> stop() async {

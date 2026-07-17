@@ -43,7 +43,9 @@ class _PackageJobOverlayState extends State<PackageJobOverlay> {
   void _onService() {
     final service = _service!;
     // A notification tap / foreground resume flagged a ready export: surface it.
-    if (service.hasReadyExport && !_sheetOpen && service.consumePendingShare()) {
+    if (service.hasReadyExport &&
+        !_sheetOpen &&
+        service.consumePendingShare()) {
       _openSheet();
     }
   }
@@ -71,8 +73,8 @@ class _PackageJobOverlayState extends State<PackageJobOverlay> {
     final label = ready
         ? 'Ready — tap to share'
         : job.kind == JobKind.export
-            ? 'Exporting… ${(job.progress * 100).round()}%'
-            : 'Importing… ${(job.progress * 100).round()}%';
+        ? 'Exporting… ${(job.progress * 100).round()}%'
+        : 'Importing… ${(job.progress * 100).round()}%';
 
     return Positioned(
       top: MediaQuery.paddingOf(context).top + 6,
@@ -92,18 +94,21 @@ class _PackageJobOverlayState extends State<PackageJobOverlay> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (ready)
-                  const Icon(Icons.ios_share, size: 14, color: Studio.amber)
+                  Icon(Icons.ios_share, size: 14, color: Studio.amber)
                 else
-                  const SizedBox(
+                  SizedBox(
                     width: 12,
                     height: 12,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Studio.amber),
+                      strokeWidth: 2,
+                      color: Studio.amber,
+                    ),
                   ),
                 const SizedBox(width: 8),
-                Text(label,
-                    style: const TextStyle(
-                        fontSize: 12, color: Studio.textPrimary)),
+                Text(
+                  label,
+                  style: TextStyle(fontSize: 12, color: Studio.textPrimary),
+                ),
               ],
             ),
           ),

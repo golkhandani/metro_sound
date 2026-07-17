@@ -96,9 +96,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
         showBack: true,
         bottomBar: track == null ? null : const _Transport(),
         body: track == null
-            ? const Center(
-                child: Text('No track loaded', style: Studio.bodyDim),
-              )
+            ? Center(child: Text('No track loaded', style: Studio.bodyDim))
             : ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
@@ -150,7 +148,7 @@ class _DoneCard extends StatelessWidget {
                   style: Studio.title,
                 ),
                 const SizedBox(height: 2),
-                const Text(
+                Text(
                   'Tracks your progress through the book',
                   style: Studio.bodyDim,
                 ),
@@ -230,7 +228,7 @@ class _PhotosCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: Studio.line),
                       ),
-                      child: const Center(
+                      child: Center(
                         child: Icon(
                           Icons.add_a_photo_outlined,
                           color: Studio.amber,
@@ -278,9 +276,9 @@ class _SpeedCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          const Icon(Icons.speed, color: Studio.amber, size: 18),
+          Icon(Icons.speed, color: Studio.amber, size: 18),
           const SizedBox(width: 8),
-          const Text('SPEED', style: Studio.label),
+          Text('SPEED', style: Studio.label),
           const Spacer(),
           StudioSegmented<double>(
             selected: audio.speed,
@@ -408,7 +406,7 @@ class _MetronomeCard extends StatelessWidget {
               ),
             ],
           ),
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(vertical: 14),
             child: Divider(color: Studio.line, height: 1),
           ),
@@ -462,7 +460,7 @@ class _VisualRow extends StatelessWidget {
           size: 22,
         ),
         const SizedBox(width: 12),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -497,7 +495,7 @@ class _LockRow extends StatelessWidget {
           size: 22,
         ),
         const SizedBox(width: 12),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -716,7 +714,7 @@ class _Transport extends StatelessWidget {
     }
 
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Studio.surface,
         border: Border(top: BorderSide(color: Studio.line)),
       ),

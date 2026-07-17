@@ -14,7 +14,8 @@ class AudioController extends ChangeNotifier {
   List<Track> _queue = [];
   int _index = -1;
   int get index => _index;
-  Track? get current => (_index >= 0 && _index < _queue.length) ? _queue[_index] : null;
+  Track? get current =>
+      (_index >= 0 && _index < _queue.length) ? _queue[_index] : null;
 
   double _volume = 1.0;
   double get volume => _volume;

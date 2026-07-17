@@ -19,8 +19,19 @@ class _MetronomeScreenState extends State<MetronomeScreen> {
   Metronome? _metro;
 
   static const _timeSigs = [
-    (2, 4), (3, 4), (4, 4), (5, 4), (6, 4), (7, 4),
-    (2, 2), (3, 8), (5, 8), (6, 8), (7, 8), (9, 8), (12, 8),
+    (2, 4),
+    (3, 4),
+    (4, 4),
+    (5, 4),
+    (6, 4),
+    (7, 4),
+    (2, 2),
+    (3, 8),
+    (5, 8),
+    (6, 8),
+    (7, 8),
+    (9, 8),
+    (12, 8),
   ];
 
   @override
@@ -36,10 +47,14 @@ class _MetronomeScreenState extends State<MetronomeScreen> {
   }
 
   void _timeSig(Metronome m) {
-    showStudioMenu(context, title: 'Time signature', actions: [
-      for (final (n, d) in _timeSigs)
-        StudioMenuAction('$n / $d', onTap: () => m.setTimeSignature(n, d)),
-    ]);
+    showStudioMenu(
+      context,
+      title: 'Time signature',
+      actions: [
+        for (final (n, d) in _timeSigs)
+          StudioMenuAction('$n / $d', onTap: () => m.setTimeSignature(n, d)),
+      ],
+    );
   }
 
   @override
@@ -51,12 +66,15 @@ class _MetronomeScreenState extends State<MetronomeScreen> {
       subtitle: m.timeSigLabel,
       showBack: false,
       actions: [
-        Row(mainAxisSize: MainAxisSize.min, children: [
-          Text('VISUAL', style: Studio.label.copyWith(fontSize: 10)),
-          const SizedBox(width: 6),
-          StudioSwitch(value: m.visualEnabled, onChanged: m.setVisualEnabled),
-          const SizedBox(width: 8),
-        ]),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('VISUAL', style: Studio.label.copyWith(fontSize: 10)),
+            const SizedBox(width: 6),
+            StudioSwitch(value: m.visualEnabled, onChanged: m.setVisualEnabled),
+            const SizedBox(width: 8),
+          ],
+        ),
       ],
       body: ListView(
         padding: const EdgeInsets.all(20),
@@ -96,23 +114,27 @@ class _MetronomeScreenState extends State<MetronomeScreen> {
               KeyedSubtree(
                 key: CoachKeys.metroTap,
                 child: StudioButton(
-                    label: 'Tap',
-                    icon: Icons.touch_app_outlined,
-                    kind: StudioButtonKind.ghost,
-                    onTap: m.tap),
+                  label: 'Tap',
+                  icon: Icons.touch_app_outlined,
+                  kind: StudioButtonKind.ghost,
+                  onTap: m.tap,
+                ),
               ),
               KeyedSubtree(
                 key: CoachKeys.metroTimeSig,
                 child: StudioButton(
-                    label: m.timeSigLabel,
-                    kind: StudioButtonKind.ghost,
-                    onTap: () => _timeSig(m)),
+                  label: m.timeSigLabel,
+                  kind: StudioButtonKind.ghost,
+                  onTap: () => _timeSig(m),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 28),
           // Big start/stop
-          Center(child: _StartButton(running: m.running, onTap: m.toggle)),
+          Center(
+            child: _StartButton(running: m.running, onTap: m.toggle),
+          ),
           const SizedBox(height: 28),
           // Volume
           _VolumeFader(metronome: m),
@@ -158,23 +180,29 @@ class _StartButton extends StatelessWidget {
         onTap();
       },
       child: Container(
-          width: 96,
-          height: 96,
-          decoration: BoxDecoration(
-            color: running ? Studio.surfaceHigh : Studio.amber,
-            shape: BoxShape.circle,
-            border: Border.all(
-                color: running ? Studio.amber : Colors.transparent, width: 2),
-            boxShadow: [
-              BoxShadow(
-                  color: Studio.amber.withValues(alpha: running ? 0.0 : 0.4),
-                  blurRadius: 22,
-                  spreadRadius: 2),
-            ],
+        width: 96,
+        height: 96,
+        decoration: BoxDecoration(
+          color: running ? Studio.surfaceHigh : Studio.amber,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: running ? Studio.amber : Colors.transparent,
+            width: 2,
           ),
-          child: Icon(running ? Icons.stop : Icons.play_arrow,
-              color: running ? Studio.amber : Studio.bg, size: 46),
+          boxShadow: [
+            BoxShadow(
+              color: Studio.amber.withValues(alpha: running ? 0.0 : 0.4),
+              blurRadius: 22,
+              spreadRadius: 2,
+            ),
+          ],
         ),
+        child: Icon(
+          running ? Icons.stop : Icons.play_arrow,
+          color: running ? Studio.amber : Studio.bg,
+          size: 46,
+        ),
+      ),
     );
   }
 }
@@ -189,10 +217,11 @@ class _VolumeFader extends StatelessWidget {
     return Row(
       children: [
         StudioIconButton(
-            icon: muted ? Icons.volume_off : Icons.volume_up,
-            size: 20,
-            color: muted ? Studio.red : Studio.amber,
-            onTap: metronome.toggleMute),
+          icon: muted ? Icons.volume_off : Icons.volume_up,
+          size: 20,
+          color: muted ? Studio.red : Studio.amber,
+          onTap: metronome.toggleMute,
+        ),
         SizedBox(width: 72, child: Text('Volume', style: Studio.body)),
         Expanded(
           child: StudioSlider(
@@ -202,9 +231,11 @@ class _VolumeFader extends StatelessWidget {
         ),
         SizedBox(
           width: 36,
-          child: Text('${(metronome.volume * 100).round()}',
-              textAlign: TextAlign.end,
-              style: Studio.numeric(12, color: Studio.textSecondary)),
+          child: Text(
+            '${(metronome.volume * 100).round()}',
+            textAlign: TextAlign.end,
+            style: Studio.numeric(12, color: Studio.textSecondary),
+          ),
         ),
       ],
     );

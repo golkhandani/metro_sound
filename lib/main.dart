@@ -7,6 +7,8 @@ import 'services/drive_sync.dart';
 import 'services/library_store.dart';
 import 'services/metronome.dart';
 import 'services/package_service.dart';
+import 'dev/screenshot_director.dart';
+import 'services/sample_library.dart';
 import 'services/settings.dart';
 import 'services/tuner.dart';
 import 'screens/onboarding_screen.dart';
@@ -33,17 +35,23 @@ Future<void> main() async {
   // (Skipped while the feature is hidden — no Google sign-in work at launch.)
   if (driveSyncEnabled) await drive.attachLibrary(library);
   packages.attachLibrary(library);
+  // Dev-only App Store screenshot rig (inert without --dart-define=SHOT).
+  await ScreenshotDirector.prepare(library, settings);
+  // First install: a small "Getting Started" book so the library isn't empty.
+  await SampleLibrary.seedIfNeeded(library, settings);
 
-  runApp(MetroSoundApp(
-    library: library,
-    metronome: metronome,
-    drive: drive,
-    settings: settings,
-    packages: packages,
-  ));
+  runApp(
+    MetroSoundApp(
+      library: library,
+      metronome: metronome,
+      drive: drive,
+      settings: settings,
+      packages: packages,
+    ),
+  );
 }
 
-class MetroSoundApp extends StatelessWidget {
+class MetroSoundApp extends StatefulWidget {
   final LibraryStore library;
   final Metronome metronome;
   final DriveSyncService drive;
@@ -59,32 +67,70 @@ class MetroSoundApp extends StatelessWidget {
   });
 
   @override
+  State<MetroSoundApp> createState() => _MetroSoundAppState();
+}
+
+class _MetroSoundAppState extends State<MetroSoundApp>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangePlatformBrightness() {
+    setState(() {}); // re-resolve when 'system' mode follows the OS
+  }
+
+  Brightness _resolve(String mode) => switch (mode) {
+    'light' => Brightness.light,
+    'dark' => Brightness.dark,
+    _ => WidgetsBinding.instance.platformDispatcher.platformBrightness,
+  };
+
+  @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider.value(value: library),
-        ChangeNotifierProvider.value(value: metronome),
-        ChangeNotifierProvider.value(value: drive),
-        ChangeNotifierProvider.value(value: settings),
-        ChangeNotifierProvider.value(value: packages),
+        ChangeNotifierProvider.value(value: widget.library),
+        ChangeNotifierProvider.value(value: widget.metronome),
+        ChangeNotifierProvider.value(value: widget.drive),
+        ChangeNotifierProvider.value(value: widget.settings),
+        ChangeNotifierProvider.value(value: widget.packages),
         ChangeNotifierProvider(create: (_) => AudioController()),
         ChangeNotifierProvider(create: (_) => Tuner()),
       ],
-      child: MaterialApp(
-        title: 'Metro Sound',
-        debugShowCheckedModeBanner: false,
-        theme: studioTheme(),
-        themeMode: ThemeMode.dark,
-        navigatorKey: appNavigatorKey,
-        // Float the package-job chip above every route.
-        builder: (context, child) => Stack(
-          textDirection: TextDirection.ltr,
-          children: [
-            ?child,
-            const PackageJobOverlay(),
-          ],
-        ),
-        home: const _Home(),
+      // Rebuild when the theme preference changes; swap the Studio palette
+      // BEFORE the tree builds, and re-key the app so every widget (all of
+      // which read Studio.* getters at build time) re-inflates in the new skin.
+      child: Builder(
+        builder: (context) {
+          final mode = context.select<AppSettings, String>((s) => s.themeMode);
+          final brightness = _resolve(mode);
+          Studio.setBrightness(brightness);
+          return KeyedSubtree(
+            key: ValueKey(brightness),
+            child: MaterialApp(
+              title: 'Metro Sound',
+              debugShowCheckedModeBanner: false,
+              theme: studioTheme(),
+              navigatorKey: appNavigatorKey,
+              // Float the package-job chip above every route.
+              builder: (context, child) => Stack(
+                textDirection: TextDirection.ltr,
+                children: [?child, const PackageJobOverlay()],
+              ),
+              home: const _Home(),
+            ),
+          );
+        },
       ),
     );
   }

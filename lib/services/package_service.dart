@@ -41,8 +41,7 @@ class PackageJob {
   });
 
   double get progress => filesTotal == 0 ? 0 : filesDone / filesTotal;
-  bool get isActive =>
-      state == JobState.preparing || state == JobState.running;
+  bool get isActive => state == JobState.preparing || state == JobState.running;
 }
 
 /// Parsed manifest of a package file, for the import preview UI.
@@ -65,8 +64,10 @@ class PackagePreview {
 
   int trackSize(Map<String, dynamic> t) =>
       (entrySizes[t['_audio']] ?? 0) +
-      ((t['_photos'] as List?) ?? const [])
-          .fold<int>(0, (s, n) => s + (entrySizes[n] ?? 0));
+      ((t['_photos'] as List?) ?? const []).fold<int>(
+        0,
+        (s, n) => s + (entrySizes[n] ?? 0),
+      );
 }
 
 /// What the user checked in the import preview, plus the append/copy decision
@@ -76,8 +77,11 @@ class ImportSelection {
   final Set<String> bookIds; // manifest book ids to import
   final Set<String> trackIds; // manifest track ids to import
   final Map<String, String?> bookTargets;
-  const ImportSelection(this.bookIds, this.trackIds,
-      {this.bookTargets = const {}});
+  const ImportSelection(
+    this.bookIds,
+    this.trackIds, {
+    this.bookTargets = const {},
+  });
   bool get isEmpty => bookIds.isEmpty;
 }
 
@@ -160,13 +164,14 @@ class PackageService extends ChangeNotifier with WidgetsBindingObserver {
       _startExport(books: books, label: label);
 
   /// Export a single track (as a one-track copy of its parent book).
-  Future<bool> startExportTrack(Book book, Track track) => _startExport(
-      books: [book], onlyTracks: [track], label: track.title);
+  Future<bool> startExportTrack(Book book, Track track) =>
+      _startExport(books: [book], onlyTracks: [track], label: track.title);
 
-  Future<bool> _startExport(
-      {required List<Book> books,
-      List<Track>? onlyTracks,
-      String? label}) async {
+  Future<bool> _startExport({
+    required List<Book> books,
+    List<Track>? onlyTracks,
+    String? label,
+  }) async {
     final lib = _lib;
     if (lib == null || busy) return false;
     unawaited(Notifications.requestPermissionOnce());
@@ -175,8 +180,8 @@ class PackageService extends ChangeNotifier with WidgetsBindingObserver {
     final scope = onlyTracks != null
         ? 'Track "${onlyTracks.first.title}"'
         : books.length == 1
-            ? 'Book "${books.first.title}"'
-            : 'Whole library (${books.length} books)';
+        ? 'Book "${books.first.title}"'
+        : 'Whole library (${books.length} books)';
     final job = PackageJob(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       kind: JobKind.export,
@@ -187,20 +192,27 @@ class PackageService extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
 
     try {
-      final spec =
-          await lib.buildExportSpec(books, onlyTracks: onlyTracks, label: label);
-      final dir =
-          await Directory(p.join(_jobsRoot!.path, job.id)).create(recursive: true);
+      final spec = await lib.buildExportSpec(
+        books,
+        onlyTracks: onlyTracks,
+        label: label,
+      );
+      final dir = await Directory(
+        p.join(_jobsRoot!.path, job.id),
+      ).create(recursive: true);
       final zipPath = p.join(dir.path, spec.zipFileName);
-      _job = PackageJob(
-        id: job.id,
-        kind: JobKind.export,
-        scopeLabel: scope,
-        trackCount: spec.trackCount,
-      )
-        ..state = JobState.running
-        ..filesTotal = spec.files.length + 1 // + manifest
-        ..bytesTotal = spec.totalBytes;
+      _job =
+          PackageJob(
+              id: job.id,
+              kind: JobKind.export,
+              scopeLabel: scope,
+              trackCount: spec.trackCount,
+            )
+            ..state = JobState.running
+            ..filesTotal =
+                spec.files.length +
+                1 // + manifest
+            ..bytesTotal = spec.totalBytes;
       notifyListeners();
 
       final receive = ReceivePort();
@@ -209,19 +221,22 @@ class PackageService extends ChangeNotifier with WidgetsBindingObserver {
         'zipPath': zipPath,
         'manifest': spec.manifestJson,
         'files': [
-          for (final (name, path) in spec.files) [name, path]
+          for (final (name, path) in spec.files) [name, path],
         ],
       });
-      _listen(receive, onOk: (msg) {
-        _job!
-          ..state = JobState.ready
-          ..outputPath = msg['path'] as String;
-        if (_foreground) {
-          _pendingShare = true;
-        } else {
-          Notifications.showExportReady(scope);
-        }
-      });
+      _listen(
+        receive,
+        onOk: (msg) {
+          _job!
+            ..state = JobState.ready
+            ..outputPath = msg['path'] as String;
+          if (_foreground) {
+            _pendingShare = true;
+          } else {
+            Notifications.showExportReady(scope);
+          }
+        },
+      );
       return true;
     } catch (e) {
       _fail('$e');
@@ -251,7 +266,9 @@ class PackageService extends ChangeNotifier with WidgetsBindingObserver {
 
   /// Extract + merge the selected subset of [preview]. False if busy.
   Future<bool> startImport(
-      PackagePreview preview, ImportSelection selection) async {
+    PackagePreview preview,
+    ImportSelection selection,
+  ) async {
     final lib = _lib;
     if (lib == null || busy || selection.isEmpty) return false;
     _clearFinishedJob();
@@ -273,21 +290,26 @@ class PackageService extends ChangeNotifier with WidgetsBindingObserver {
       ],
     ];
 
-    final job = PackageJob(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      kind: JobKind.import,
-      scopeLabel: 'Import ${books.length} book(s), ${tracks.length} track(s)',
-      trackCount: tracks.length,
-    )
-      ..state = JobState.running
-      ..filesTotal = wanted.length
-      ..bytesTotal =
-          wanted.fold(0, (s, n) => s + (preview.entrySizes[n] ?? 0));
+    final job =
+        PackageJob(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            kind: JobKind.import,
+            scopeLabel:
+                'Import ${books.length} book(s), ${tracks.length} track(s)',
+            trackCount: tracks.length,
+          )
+          ..state = JobState.running
+          ..filesTotal = wanted.length
+          ..bytesTotal = wanted.fold(
+            0,
+            (s, n) => s + (preview.entrySizes[n] ?? 0),
+          );
     _job = job;
     notifyListeners();
 
-    final destDir =
-        await Directory(p.join(_jobsRoot!.path, job.id)).create(recursive: true);
+    final destDir = await Directory(
+      p.join(_jobsRoot!.path, job.id),
+    ).create(recursive: true);
     final receive = ReceivePort();
     _isolate = await Isolate.spawn(_importEntry, {
       'send': receive.sendPort,
@@ -295,34 +317,39 @@ class PackageService extends ChangeNotifier with WidgetsBindingObserver {
       'names': wanted,
       'destDir': destDir.path,
     });
-    _listen(receive, onOk: (msg) async {
-      final extracted = (msg['files'] as Map).cast<String, String>();
-      try {
-        final result = await lib.applyImport(
-          manifestBooks: books,
-          manifestTracks: tracks,
-          extracted: extracted,
-          bookTargets: selection.bookTargets,
-        );
-        _job!
-          ..state = JobState.done
-          ..resultSummary = result.summary;
-      } catch (e) {
-        _job!
-          ..state = JobState.failed
-          ..error = '$e';
-      }
-      try {
-        await destDir.delete(recursive: true);
-      } catch (_) {}
-    });
+    _listen(
+      receive,
+      onOk: (msg) async {
+        final extracted = (msg['files'] as Map).cast<String, String>();
+        try {
+          final result = await lib.applyImport(
+            manifestBooks: books,
+            manifestTracks: tracks,
+            extracted: extracted,
+            bookTargets: selection.bookTargets,
+          );
+          _job!
+            ..state = JobState.done
+            ..resultSummary = result.summary;
+        } catch (e) {
+          _job!
+            ..state = JobState.failed
+            ..error = '$e';
+        }
+        try {
+          await destDir.delete(recursive: true);
+        } catch (_) {}
+      },
+    );
     return true;
   }
 
   // ─── Shared machinery ───
 
-  void _listen(ReceivePort receive,
-      {required FutureOr<void> Function(Map msg) onOk}) {
+  void _listen(
+    ReceivePort receive, {
+    required FutureOr<void> Function(Map msg) onOk,
+  }) {
     receive.listen((raw) async {
       final msg = raw as Map;
       switch (msg['type']) {
@@ -383,16 +410,18 @@ class PackageService extends ChangeNotifier with WidgetsBindingObserver {
     if (j == null || !j.isActive) return;
     _control?.send('cancel');
     final iso = _isolate;
-    unawaited(Future.delayed(const Duration(seconds: 2), () async {
-      if (_isolate == iso && iso != null && _job?.isActive == true) {
-        iso.kill(priority: Isolate.immediate);
-        _isolate = null;
-        _control = null;
-        _job?.state = JobState.cancelled;
-        await _deleteJobDir(j.id);
-        notifyListeners();
-      }
-    }));
+    unawaited(
+      Future.delayed(const Duration(seconds: 2), () async {
+        if (_isolate == iso && iso != null && _job?.isActive == true) {
+          iso.kill(priority: Isolate.immediate);
+          _isolate = null;
+          _control = null;
+          _job?.state = JobState.cancelled;
+          await _deleteJobDir(j.id);
+          notifyListeners();
+        }
+      }),
+    );
   }
 
   /// Drop the current (non-active) job and its temp files.
@@ -537,13 +566,8 @@ Map<String, Object> _readManifest(String zipPath) {
     final archive = ZipDecoder().decodeStream(input);
     final mf = archive.find('manifest.json');
     if (mf == null) throw const FormatException('No manifest');
-    final sizes = <String, int>{
-      for (final f in archive.files) f.name: f.size,
-    };
-    return {
-      'manifest': utf8.decode(mf.readBytes() ?? []),
-      'sizes': sizes,
-    };
+    final sizes = <String, int>{for (final f in archive.files) f.name: f.size};
+    return {'manifest': utf8.decode(mf.readBytes() ?? []), 'sizes': sizes};
   } finally {
     input.closeSync();
   }

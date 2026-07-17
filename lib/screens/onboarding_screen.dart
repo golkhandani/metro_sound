@@ -60,7 +60,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     duration: const Duration(milliseconds: 200),
                     child: Pressable(
                       onTap: _last ? () {} : _finish,
-                      child: const Padding(
+                      child: Padding(
                         padding: EdgeInsets.all(8),
                         child: Text('SKIP', style: Studio.label),
                       ),
@@ -201,7 +201,7 @@ class _WelcomeArt extends StatelessWidget {
               ),
             ],
           ),
-          child: const Icon(Icons.av_timer, size: 52, color: Studio.amber),
+          child: Icon(Icons.av_timer, size: 52, color: Studio.amber),
         ),
         const SizedBox(height: 20),
         Text(
@@ -332,7 +332,7 @@ class _ToolsArt extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.lock_clock, size: 14, color: Studio.amber),
+              Icon(Icons.lock_clock, size: 14, color: Studio.amber),
               const SizedBox(width: 6),
               Text(
                 'LOCKED TO MUSIC',
@@ -435,7 +435,7 @@ class _ShareArt extends StatelessWidget {
                   margin: const EdgeInsets.symmetric(horizontal: 3),
                   width: 4,
                   height: 4,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     color: Studio.amber,
                     shape: BoxShape.circle,
                   ),

@@ -18,21 +18,26 @@ class BooksScreen extends StatelessWidget {
 
   Future<void> _createBook(BuildContext context) async {
     final library = context.read<LibraryStore>();
-    final title = await studioPrompt(context,
-        title: 'New Book', hint: 'e.g. Ketab-e Aval — Tār');
+    final title = await studioPrompt(
+      context,
+      title: 'New Book',
+      hint: 'e.g. Ketab-e Aval — Tār',
+    );
     if (title == null || title.trim().isEmpty) return;
     final book = await library.createBook(title);
     if (context.mounted) {
-      Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => BookScreen(book: book)));
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => BookScreen(book: book)));
     }
   }
 
   Future<void> _setCover(BuildContext context, Book book) async {
     final library = context.read<LibraryStore>();
     final result = await FilePicker.platform.pickFiles(type: FileType.image);
-    final path =
-        (result != null && result.files.isNotEmpty) ? result.files.first.path : null;
+    final path = (result != null && result.files.isNotEmpty)
+        ? result.files.first.path
+        : null;
     if (path != null) await library.setBookCover(book, path);
   }
 
@@ -40,45 +45,69 @@ class BooksScreen extends StatelessWidget {
     final library = context.read<LibraryStore>();
     final hasCover =
         book.coverPath != null && File(book.coverPath!).existsSync();
-    showStudioMenu(context, title: book.title, actions: [
-      StudioMenuAction('Rename',
-          icon: Icons.edit_outlined, onTap: () async {
-        final t = await studioPrompt(context,
-            title: 'Rename Book', initial: book.title);
-        if (t != null) await library.renameBook(book, t);
-      }),
-      StudioMenuAction(hasCover ? 'Change cover' : 'Add cover',
-          icon: Icons.image_outlined, onTap: () => _setCover(context, book)),
-      StudioMenuAction('Share book', icon: Icons.ios_share, onTap: () async {
-        if (library.trackCount(book.id) == 0) {
-          showToast(context, 'This book has no tracks to share');
-          return;
-        }
-        final packages = context.read<PackageService>();
-        if (!await packages.startExportBooks([book])) {
-          if (context.mounted) {
-            showToast(context, 'Another export is already running');
-          }
-          return;
-        }
-        if (context.mounted) await showPackageProgressSheet(context);
-      }),
-      if (hasCover)
-        StudioMenuAction('Remove cover',
+    showStudioMenu(
+      context,
+      title: book.title,
+      actions: [
+        StudioMenuAction(
+          'Rename',
+          icon: Icons.edit_outlined,
+          onTap: () async {
+            final t = await studioPrompt(
+              context,
+              title: 'Rename Book',
+              initial: book.title,
+            );
+            if (t != null) await library.renameBook(book, t);
+          },
+        ),
+        StudioMenuAction(
+          hasCover ? 'Change cover' : 'Add cover',
+          icon: Icons.image_outlined,
+          onTap: () => _setCover(context, book),
+        ),
+        StudioMenuAction(
+          'Share book',
+          icon: Icons.ios_share,
+          onTap: () async {
+            if (library.trackCount(book.id) == 0) {
+              showToast(context, 'This book has no tracks to share');
+              return;
+            }
+            final packages = context.read<PackageService>();
+            if (!await packages.startExportBooks([book])) {
+              if (context.mounted) {
+                showToast(context, 'Another export is already running');
+              }
+              return;
+            }
+            if (context.mounted) await showPackageProgressSheet(context);
+          },
+        ),
+        if (hasCover)
+          StudioMenuAction(
+            'Remove cover',
             icon: Icons.hide_image_outlined,
-            onTap: () => library.removeBookCover(book)),
-      StudioMenuAction('Delete',
+            onTap: () => library.removeBookCover(book),
+          ),
+        StudioMenuAction(
+          'Delete',
           icon: Icons.delete_outline,
-          destructive: true, onTap: () async {
-        final n = library.trackCount(book.id);
-        final ok = await studioConfirm(context,
-            title: 'Delete "${book.title}"?',
-            message: n == 0 ? 'This book is empty.' : 'Deletes $n track(s).',
-            confirmLabel: 'Delete',
-            destructive: true);
-        if (ok) await library.deleteBook(book);
-      }),
-    ]);
+          destructive: true,
+          onTap: () async {
+            final n = library.trackCount(book.id);
+            final ok = await studioConfirm(
+              context,
+              title: 'Delete "${book.title}"?',
+              message: n == 0 ? 'This book is empty.' : 'Deletes $n track(s).',
+              confirmLabel: 'Delete',
+              destructive: true,
+            );
+            if (ok) await library.deleteBook(book);
+          },
+        ),
+      ],
+    );
   }
 
   @override
@@ -93,46 +122,47 @@ class BooksScreen extends StatelessWidget {
         KeyedSubtree(
           key: CoachKeys.booksImport,
           child: StudioIconButton(
-              icon: Icons.download_outlined,
-              tooltip: 'Import shared library',
-              onTap: () => runPackageImportFlow(context)),
+            icon: Icons.download_outlined,
+            tooltip: 'Import shared library',
+            onTap: () => runPackageImportFlow(context),
+          ),
         ),
         KeyedSubtree(
           key: CoachKeys.booksNewBook,
           child: StudioIconButton(
-              icon: Icons.add,
-              tooltip: 'New book',
-              onTap: () => _createBook(context)),
+            icon: Icons.add,
+            tooltip: 'New book',
+            onTap: () => _createBook(context),
+          ),
         ),
       ],
       body: !library.ready
-          ? const Center(
-              child: CircularProgressIndicator(color: Studio.amber))
+          ? Center(child: CircularProgressIndicator(color: Studio.amber))
           : books.isEmpty
-              ? _Empty(onCreate: () => _createBook(context))
-              : GridView.builder(
-                  padding: const EdgeInsets.all(16),
-                  gridDelegate:
-                      const SliverGridDelegateWithMaxCrossAxisExtent(
-                    maxCrossAxisExtent: 180,
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
-                    childAspectRatio: 0.6,
+          ? _Empty(onCreate: () => _createBook(context))
+          : GridView.builder(
+              padding: const EdgeInsets.all(16),
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 180,
+                mainAxisSpacing: 16,
+                crossAxisSpacing: 16,
+                childAspectRatio: 0.6,
+              ),
+              itemCount: books.length,
+              itemBuilder: (context, i) {
+                final book = books[i];
+                return _BookTile(
+                  key: i == 0 ? CoachKeys.booksFirstTile : null,
+                  book: book,
+                  total: library.trackCount(book.id),
+                  done: library.doneCount(book.id),
+                  onOpen: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => BookScreen(book: book)),
                   ),
-                  itemCount: books.length,
-                  itemBuilder: (context, i) {
-                    final book = books[i];
-                    return _BookTile(
-                      key: i == 0 ? CoachKeys.booksFirstTile : null,
-                      book: book,
-                      total: library.trackCount(book.id),
-                      done: library.doneCount(book.id),
-                      onOpen: () => Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => BookScreen(book: book))),
-                      onMenu: () => _menu(context, book),
-                    );
-                  },
-                ),
+                  onMenu: () => _menu(context, book),
+                );
+              },
+            ),
     );
   }
 }
@@ -154,7 +184,8 @@ class _BookTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasCover = book.coverPath != null && File(book.coverPath!).existsSync();
+    final hasCover =
+        book.coverPath != null && File(book.coverPath!).existsSync();
     return Pressable(
       onTap: onOpen,
       onLongPress: onMenu,
@@ -181,10 +212,11 @@ class _BookTile extends StatelessWidget {
                       top: 4,
                       right: 4,
                       child: StudioIconButton(
-                          icon: Icons.more_horiz,
-                          size: 18,
-                          color: Studio.textPrimary,
-                          onTap: onMenu),
+                        icon: Icons.more_horiz,
+                        size: 18,
+                        color: Studio.textPrimary,
+                        onTap: onMenu,
+                      ),
                     ),
                     if (total > 0)
                       Positioned(
@@ -192,14 +224,18 @@ class _BookTile extends StatelessWidget {
                         bottom: 8,
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: Studio.bg.withValues(alpha: 0.8),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(color: Studio.line),
                           ),
-                          child: Text('$done/$total',
-                              style: Studio.numeric(11, color: Studio.amber)),
+                          child: Text(
+                            '$done/$total',
+                            style: Studio.numeric(11, color: Studio.amber),
+                          ),
                         ),
                       ),
                   ],
@@ -207,10 +243,12 @@ class _BookTile extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            Text(book.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Studio.title.copyWith(fontSize: 13)),
+            Text(
+              book.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Studio.title.copyWith(fontSize: 13),
+            ),
             Text(total == 0 ? 'Empty' : '$total tracks', style: Studio.bodyDim),
           ],
         ),
@@ -240,8 +278,11 @@ class _ColorPlaceholder extends StatelessWidget {
         ),
       ),
       child: Center(
-        child: Icon(Icons.album_outlined,
-            size: 44, color: Colors.white.withValues(alpha: 0.55)),
+        child: Icon(
+          Icons.album_outlined,
+          size: 44,
+          color: Colors.white.withValues(alpha: 0.55),
+        ),
       ),
     );
   }
@@ -257,16 +298,16 @@ class _Empty extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.library_music_outlined,
-              size: 64, color: Studio.textDim),
+          Icon(Icons.library_music_outlined, size: 64, color: Studio.textDim),
           const SizedBox(height: 16),
-          const Text('No books yet', style: Studio.title),
+          Text('No books yet', style: Studio.title),
           const SizedBox(height: 6),
-          const Text('Create a book, then import its practice tracks.',
-              style: Studio.bodyDim),
+          Text(
+            'Create a book, then import its practice tracks.',
+            style: Studio.bodyDim,
+          ),
           const SizedBox(height: 20),
-          StudioButton(
-              label: 'New Book', icon: Icons.add, onTap: onCreate),
+          StudioButton(label: 'New Book', icon: Icons.add, onTap: onCreate),
         ],
       ),
     );

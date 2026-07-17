@@ -13,16 +13,60 @@ enum Accidental { flats, sharps, both }
 class AppSettings extends ChangeNotifier {
   // Base 12 chromatic names (C = index 0).
   static const _lettersFlat = [
-    'C', 'D♭', 'D', 'E♭', 'E', 'F', 'G♭', 'G', 'A♭', 'A', 'B♭', 'B'
+    'C',
+    'D♭',
+    'D',
+    'E♭',
+    'E',
+    'F',
+    'G♭',
+    'G',
+    'A♭',
+    'A',
+    'B♭',
+    'B',
   ];
   static const _lettersSharp = [
-    'C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'
+    'C',
+    'C♯',
+    'D',
+    'D♯',
+    'E',
+    'F',
+    'F♯',
+    'G',
+    'G♯',
+    'A',
+    'A♯',
+    'B',
   ];
   static const _solfegeFlat = [
-    'Do', 'Re♭', 'Re', 'Mi♭', 'Mi', 'Fa', 'Sol♭', 'Sol', 'La♭', 'La', 'Si♭', 'Si'
+    'Do',
+    'Re♭',
+    'Re',
+    'Mi♭',
+    'Mi',
+    'Fa',
+    'Sol♭',
+    'Sol',
+    'La♭',
+    'La',
+    'Si♭',
+    'Si',
   ];
   static const _solfegeSharp = [
-    'Do', 'Do♯', 'Re', 'Re♯', 'Mi', 'Fa', 'Fa♯', 'Sol', 'Sol♯', 'La', 'La♯', 'Si'
+    'Do',
+    'Do♯',
+    'Re',
+    'Re♯',
+    'Mi',
+    'Fa',
+    'Fa♯',
+    'Sol',
+    'Sol♯',
+    'La',
+    'La♯',
+    'Si',
   ];
 
   // Quarter-tone (Persian) mapping: odd 24-TET index -> (natural chromatic
@@ -62,6 +106,14 @@ class AppSettings extends ChangeNotifier {
   final Set<String> _seenTips = {};
   bool tipSeen(String id) => _seenTips.contains(id);
 
+  /// 'system' | 'light' | 'dark' — resolved to a Brightness at the app root.
+  String _themeMode = 'system';
+  String get themeMode => _themeMode;
+
+  /// Whether the one-time "Getting Started" sample book was already seeded.
+  bool _sampleSeeded = false;
+  bool get sampleSeeded => _sampleSeeded;
+
   File? _file;
 
   Future<void> init() async {
@@ -69,7 +121,8 @@ class AppSettings extends ChangeNotifier {
       final dir = await getApplicationSupportDirectory();
       _file = File(p.join(dir.path, 'settings.json'));
       if (await _file!.exists()) {
-        final j = jsonDecode(await _file!.readAsString()) as Map<String, dynamic>;
+        final j =
+            jsonDecode(await _file!.readAsString()) as Map<String, dynamic>;
         if (j['noteNaming'] == 'solfege') _noteNaming = NoteNaming.solfege;
         switch (j['accidental']) {
           case 'sharps':
@@ -81,8 +134,10 @@ class AppSettings extends ChangeNotifier {
         }
         _microtones = j['microtones'] == true;
         _onboardingDone = j['onboardingDone'] == true;
-        _seenTips
-            .addAll(((j['seenTips'] as List?) ?? const []).cast<String>());
+        _sampleSeeded = j['sampleSeeded'] == true;
+        final tm = j['themeMode'] as String?;
+        if (tm == 'light' || tm == 'dark' || tm == 'system') _themeMode = tm!;
+        _seenTips.addAll(((j['seenTips'] as List?) ?? const []).cast<String>());
       }
     } catch (e) {
       debugPrint('Settings load error: $e');
@@ -91,13 +146,19 @@ class AppSettings extends ChangeNotifier {
 
   Future<void> _save() async {
     try {
-      await _file?.writeAsString(jsonEncode({
-        'noteNaming': _noteNaming == NoteNaming.solfege ? 'solfege' : 'letters',
-        'accidental': _accidental.name,
-        'microtones': _microtones,
-        'onboardingDone': _onboardingDone,
-        'seenTips': _seenTips.toList(),
-      }));
+      await _file?.writeAsString(
+        jsonEncode({
+          'noteNaming': _noteNaming == NoteNaming.solfege
+              ? 'solfege'
+              : 'letters',
+          'accidental': _accidental.name,
+          'microtones': _microtones,
+          'onboardingDone': _onboardingDone,
+        'sampleSeeded': _sampleSeeded,
+          'themeMode': _themeMode,
+          'seenTips': _seenTips.toList(),
+        }),
+      );
     } catch (_) {}
   }
 
@@ -118,6 +179,20 @@ class AppSettings extends ChangeNotifier {
   Future<void> setMicrotones(bool v) async {
     if (v == _microtones) return;
     _microtones = v;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setSampleSeeded(bool v) async {
+    if (v == _sampleSeeded) return;
+    _sampleSeeded = v;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setThemeMode(String mode) async {
+    if (mode == _themeMode) return;
+    _themeMode = mode;
     notifyListeners();
     await _save();
   }

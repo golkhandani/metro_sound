@@ -169,7 +169,8 @@ class CoachMarks {
       return box is RenderBox && box.attached && box.hasSize;
     }).toList();
     debugPrint(
-        'coach[$screenId]: ${targets.length}/${all.length} anchors mounted');
+      'coach[$screenId]: ${targets.length}/${all.length} anchors mounted',
+    );
     // No anchors (e.g. empty grid): don't mark seen — re-arm for next visit.
     if (targets.isEmpty) return;
 
@@ -338,7 +339,7 @@ class _CoachOverlayState extends State<_CoachOverlay>
               behavior: HitTestBehavior.opaque,
               onTap: _next,
               child: rect == null
-                  ? const ColoredBox(color: Colors.black54)
+                  ? ColoredBox(color: Studio.dim)
                   : TweenAnimationBuilder<Rect?>(
                       tween: RectTween(begin: _prevRect ?? rect, end: rect),
                       duration: const Duration(milliseconds: 250),
@@ -450,7 +451,7 @@ class _DimPainter extends CustomPainter {
       Path()..addRect(Offset.zero & size),
       Path()..addRRect(hole),
     );
-    canvas.drawPath(dim, Paint()..color = Colors.black.withValues(alpha: 0.75));
+    canvas.drawPath(dim, Paint()..color = Studio.dim);
     // Amber ring + soft glow around the spotlight.
     canvas.drawRRect(
       hole,

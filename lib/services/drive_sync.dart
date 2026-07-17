@@ -127,7 +127,9 @@ class DriveSyncService extends ChangeNotifier {
       _authClient = autoRefreshingClient(_clientId, _creds!, _baseClient);
       await _saveCreds();
       await _refreshAccountLabel();
-      _setStatus('Connected${_accountLabel != null ? ' as $_accountLabel' : ''}');
+      _setStatus(
+        'Connected${_accountLabel != null ? ' as $_accountLabel' : ''}',
+      );
       _resumeAutoSyncIfEnabled();
     } catch (e) {
       _setStatus('Sign-in failed: $e');
@@ -203,7 +205,8 @@ class DriveSyncService extends ChangeNotifier {
     try {
       do {
         final res = await api.files.list(
-          q: "mimeType='application/vnd.google-apps.folder' and "
+          q:
+              "mimeType='application/vnd.google-apps.folder' and "
               "trashed=false and 'root' in parents",
           $fields: 'nextPageToken, files(id,name)',
           pageSize: 100,
@@ -228,8 +231,11 @@ class DriveSyncService extends ChangeNotifier {
 
   /// Backs up into [folderId] if given, else a folder named [folderName]
   /// (created if needed), else the default "Metro Sound" folder.
-  Future<bool> backup(LibraryStore library,
-      {String? folderId, String? folderName}) async {
+  Future<bool> backup(
+    LibraryStore library, {
+    String? folderId,
+    String? folderName,
+  }) async {
     final api = await _api();
     if (api == null) {
       _setStatus('Not connected');
@@ -242,8 +248,11 @@ class DriveSyncService extends ChangeNotifier {
     }
     _setBusy(true, 'Preparing backup…');
     try {
-      final rootId =
-          await _dataRoot(api, folderId: folderId, folderName: folderName);
+      final rootId = await _dataRoot(
+        api,
+        folderId: folderId,
+        folderName: folderName,
+      );
       final rootIndex = await _folderIndex(api, rootId);
 
       // Total = library.json + every cover + every audio + every photo.
@@ -258,15 +267,24 @@ class DriveSyncService extends ChangeNotifier {
 
       // library.json lives at the root of the "Metro Sound" folder.
       final libraryJson = jsonEncode(_catalogPayload(library));
-      await _uploadBytes(api, rootId, _libraryFile, utf8.encode(libraryJson),
-          rootIndex[_libraryFile], 'application/json');
+      await _uploadBytes(
+        api,
+        rootId,
+        _libraryFile,
+        utf8.encode(libraryJson),
+        rootIndex[_libraryFile],
+        'application/json',
+      );
       done++;
       _setProgress(done / total, 'Backing up… ($done/$total)');
 
       // One subfolder per book, mirroring the in-app structure.
       for (final b in library.allBooks) {
-        final bookFolderId =
-            await _ensureFolder(api, _bookFolderName(b), parentId: rootId);
+        final bookFolderId = await _ensureFolder(
+          api,
+          _bookFolderName(b),
+          parentId: rootId,
+        );
         final bookIndex = await _folderIndex(api, bookFolderId);
 
         if (b.coverPath != null) {
@@ -287,7 +305,9 @@ class DriveSyncService extends ChangeNotifier {
         }
       }
 
-      _setStatus('Backup complete — saved to Drive in ${library.allBooks.length} book folder(s)');
+      _setStatus(
+        'Backup complete — saved to Drive in ${library.allBooks.length} book folder(s)',
+      );
       return true;
     } catch (e) {
       _setStatus('Backup failed: $e');
@@ -301,8 +321,12 @@ class DriveSyncService extends ChangeNotifier {
 
   /// Upload [path] into [folderId] unless a file with the same name is already
   /// there. Updates [index] so duplicate references within one run skip too.
-  Future<void> _uploadIfMissing(drive.DriveApi api, String folderId,
-      Map<String, String> index, String path) async {
+  Future<void> _uploadIfMissing(
+    drive.DriveApi api,
+    String folderId,
+    Map<String, String> index,
+    String path,
+  ) async {
     final name = p.basename(path);
     if (index.containsKey(name)) return;
     final f = File(path);
@@ -313,8 +337,11 @@ class DriveSyncService extends ChangeNotifier {
 
   // ─── Load (pull) ───
 
-  Future<bool> loadCatalog(LibraryStore library,
-      {String? folderId, String? folderName}) async {
+  Future<bool> loadCatalog(
+    LibraryStore library, {
+    String? folderId,
+    String? folderName,
+  }) async {
     final api = await _api();
     if (api == null) {
       _setStatus('Not connected');
@@ -352,35 +379,52 @@ class DriveSyncService extends ChangeNotifier {
 
       // Build a file index per book subfolder.
       final subfolders = await _listSubfolders(api, rootId);
-      final bookFileIndex = <String, Map<String, String>>{}; // bookId -> name->id
+      final bookFileIndex =
+          <String, Map<String, String>>{}; // bookId -> name->id
       for (final b in books) {
         final fid = subfolders[_bookFolderName(b)];
-        bookFileIndex[b.id] =
-            fid != null ? await _folderIndex(api, fid) : <String, String>{};
+        bookFileIndex[b.id] = fid != null
+            ? await _folderIndex(api, fid)
+            : <String, String>{};
       }
 
       // Each download knows which book's folder index to look in.
-      final downloads = <(
-        Map<String, String> index,
-        String name,
-        String destDir,
-        void Function(String) assign
-      )>[];
+      final downloads =
+          <
+            (
+              Map<String, String> index,
+              String name,
+              String destDir,
+              void Function(String) assign,
+            )
+          >[];
       for (final t in tracks) {
         final idx = bookFileIndex[t.bookId] ?? const {};
-        downloads.add((idx, p.basename(t.audioPath), library.audioDirPath,
-            (lp) => t.audioPath = lp));
+        downloads.add((
+          idx,
+          p.basename(t.audioPath),
+          library.audioDirPath,
+          (lp) => t.audioPath = lp,
+        ));
         for (var i = 0; i < t.photoPaths.length; i++) {
           final pi = i;
-          downloads.add((idx, p.basename(t.photoPaths[i]), library.photoDirPath,
-              (lp) => t.photoPaths[pi] = lp));
+          downloads.add((
+            idx,
+            p.basename(t.photoPaths[i]),
+            library.photoDirPath,
+            (lp) => t.photoPaths[pi] = lp,
+          ));
         }
       }
       for (final b in books) {
         if (b.coverPath != null) {
           final idx = bookFileIndex[b.id] ?? const {};
-          downloads.add((idx, p.basename(b.coverPath!), library.coverDirPath,
-              (lp) => b.coverPath = lp));
+          downloads.add((
+            idx,
+            p.basename(b.coverPath!),
+            library.coverDirPath,
+            (lp) => b.coverPath = lp,
+          ));
         }
       }
 
@@ -401,7 +445,9 @@ class DriveSyncService extends ChangeNotifier {
       }
 
       await library.replaceCatalog(books, tracks);
-      _setStatus('Catalog loaded — ${books.length} book(s), ${tracks.length} track(s)');
+      _setStatus(
+        'Catalog loaded — ${books.length} book(s), ${tracks.length} track(s)',
+      );
       return true;
     } catch (e) {
       _setStatus('Load failed: $e');
@@ -416,13 +462,20 @@ class DriveSyncService extends ChangeNotifier {
   // ─── Drive helpers ───
 
   /// Find a folder by [name] (optionally under [parentId]) without creating it.
-  Future<String?> _findFolder(drive.DriveApi api, String name,
-      {String? parentId}) async {
+  Future<String?> _findFolder(
+    drive.DriveApi api,
+    String name, {
+    String? parentId,
+  }) async {
     final q = StringBuffer(
-        "mimeType='application/vnd.google-apps.folder' and name='${_escape(name)}' and trashed=false");
+      "mimeType='application/vnd.google-apps.folder' and name='${_escape(name)}' and trashed=false",
+    );
     if (parentId != null) q.write(" and '$parentId' in parents");
-    final res = await api.files
-        .list(q: q.toString(), $fields: 'files(id,name)', spaces: 'drive');
+    final res = await api.files.list(
+      q: q.toString(),
+      $fields: 'files(id,name)',
+      spaces: 'drive',
+    );
     final found = res.files;
     return (found != null && found.isNotEmpty) ? found.first.id : null;
   }
@@ -434,8 +487,11 @@ class DriveSyncService extends ChangeNotifier {
   ///   • new folder "X"          → "X/Metro Sound"
   ///   • existing folder "X"     → "X/Metro Sound"
   ///   • the "Metro Sound" folder itself → used as-is (no double nesting)
-  Future<String> _dataRoot(drive.DriveApi api,
-      {String? folderId, String? folderName}) async {
+  Future<String> _dataRoot(
+    drive.DriveApi api, {
+    String? folderId,
+    String? folderName,
+  }) async {
     if (folderId == null && (folderName == null || folderName.trim().isEmpty)) {
       return _ensureFolder(api, _folderName);
     }
@@ -448,10 +504,14 @@ class DriveSyncService extends ChangeNotifier {
   }
 
   /// Find or create a folder by [name], optionally under [parentId].
-  Future<String> _ensureFolder(drive.DriveApi api, String name,
-      {String? parentId}) async {
+  Future<String> _ensureFolder(
+    drive.DriveApi api,
+    String name, {
+    String? parentId,
+  }) async {
     final q = StringBuffer(
-        "mimeType='application/vnd.google-apps.folder' and name='${_escape(name)}' and trashed=false");
+      "mimeType='application/vnd.google-apps.folder' and name='${_escape(name)}' and trashed=false",
+    );
     if (parentId != null) q.write(" and '$parentId' in parents");
     final res = await api.files.list(
       q: q.toString(),
@@ -470,12 +530,15 @@ class DriveSyncService extends ChangeNotifier {
 
   /// Subfolders directly under [parentId], mapped name -> id.
   Future<Map<String, String>> _listSubfolders(
-      drive.DriveApi api, String parentId) async {
+    drive.DriveApi api,
+    String parentId,
+  ) async {
     final map = <String, String>{};
     String? pageToken;
     do {
       final res = await api.files.list(
-        q: "'$parentId' in parents and "
+        q:
+            "'$parentId' in parents and "
             "mimeType='application/vnd.google-apps.folder' and trashed=false",
         $fields: 'nextPageToken, files(id,name)',
         pageSize: 1000,
@@ -490,15 +553,16 @@ class DriveSyncService extends ChangeNotifier {
     return map;
   }
 
-  String _escape(String s) =>
-      s.replaceAll('\\', '\\\\').replaceAll("'", "\\'");
+  String _escape(String s) => s.replaceAll('\\', '\\\\').replaceAll("'", "\\'");
 
   String _bookFolderName(Book b) =>
       b.title.trim().isEmpty ? 'Untitled' : b.title.trim();
 
   /// Map of fileName -> fileId for everything (non-trashed) in the folder.
   Future<Map<String, String>> _folderIndex(
-      drive.DriveApi api, String folderId) async {
+    drive.DriveApi api,
+    String folderId,
+  ) async {
     final map = <String, String>{};
     String? pageToken;
     do {
@@ -518,7 +582,11 @@ class DriveSyncService extends ChangeNotifier {
   }
 
   Future<void> _uploadFile(
-      drive.DriveApi api, String folderId, String name, File file) async {
+    drive.DriveApi api,
+    String folderId,
+    String name,
+    File file,
+  ) async {
     final length = await file.length();
     final media = drive.Media(file.openRead(), length);
     final meta = drive.File()
@@ -527,8 +595,14 @@ class DriveSyncService extends ChangeNotifier {
     await api.files.create(meta, uploadMedia: media);
   }
 
-  Future<void> _uploadBytes(drive.DriveApi api, String folderId, String name,
-      List<int> bytes, String? existingId, String contentType) async {
+  Future<void> _uploadBytes(
+    drive.DriveApi api,
+    String folderId,
+    String name,
+    List<int> bytes,
+    String? existingId,
+    String contentType,
+  ) async {
     final media = drive.Media(
       Stream.value(bytes),
       bytes.length,
@@ -545,10 +619,12 @@ class DriveSyncService extends ChangeNotifier {
   }
 
   Future<List<int>> _downloadBytes(drive.DriveApi api, String fileId) async {
-    final media = await api.files.get(
-      fileId,
-      downloadOptions: drive.DownloadOptions.fullMedia,
-    ) as drive.Media;
+    final media =
+        await api.files.get(
+              fileId,
+              downloadOptions: drive.DownloadOptions.fullMedia,
+            )
+            as drive.Media;
     final out = <int>[];
     await for (final chunk in media.stream) {
       out.addAll(chunk);
@@ -561,12 +637,12 @@ class DriveSyncService extends ChangeNotifier {
   /// The catalog snapshot written to Drive: data + tombstones + a signature and
   /// the writer's device id (so peers can tell whose change it is).
   Map<String, dynamic> _catalogPayload(LibraryStore library) => {
-        'books': library.allBooks.map((b) => b.toJson()).toList(),
-        'tracks': library.allTracks.map((t) => t.toJson()).toList(),
-        'deleted': library.tombstones,
-        'signature': library.catalogSignature(),
-        'writer': _deviceId,
-      };
+    'books': library.allBooks.map((b) => b.toJson()).toList(),
+    'tracks': library.allTracks.map((t) => t.toJson()).toList(),
+    'deleted': library.tombstones,
+    'signature': library.catalogSignature(),
+    'writer': _deviceId,
+  };
 
   /// Wire the library into the sync engine. Called once at startup.
   Future<void> attachLibrary(LibraryStore library) async {
@@ -580,7 +656,11 @@ class DriveSyncService extends ChangeNotifier {
     }
   }
 
-  Future<void> setAutoSync(bool on, {String? folderId, String? folderName}) async {
+  Future<void> setAutoSync(
+    bool on, {
+    String? folderId,
+    String? folderName,
+  }) async {
     if (on && !isConnected) {
       _setAutoState('Connect to Google Drive first');
       return;
@@ -645,7 +725,9 @@ class DriveSyncService extends ChangeNotifier {
       final folderId = await _resolveAutoFolder(api);
       _setAutoState('Syncing…');
       await _pullMerge(api, lib, folderId);
-      if (lib.catalogSignature() != _syncedSignature || _pendingPush || initial) {
+      if (lib.catalogSignature() != _syncedSignature ||
+          _pendingPush ||
+          initial) {
         await _pushCatalog(api, lib, folderId);
       }
       _pendingPush = false;
@@ -671,13 +753,21 @@ class DriveSyncService extends ChangeNotifier {
   /// Upload the catalog + any missing media to the auto-sync folder (silent —
   /// no big progress UI).
   Future<void> _pushCatalog(
-      drive.DriveApi api, LibraryStore library, String rootId) async {
+    drive.DriveApi api,
+    LibraryStore library,
+    String rootId,
+  ) async {
     if (library.allBooks.isEmpty && library.allTracks.isEmpty) return;
     final sig = library.catalogSignature();
     final rootIndex = await _folderIndex(api, rootId);
-    await _uploadBytes(api, rootId, _libraryFile,
-        utf8.encode(jsonEncode(_catalogPayload(library))), rootIndex[_libraryFile],
-        'application/json');
+    await _uploadBytes(
+      api,
+      rootId,
+      _libraryFile,
+      utf8.encode(jsonEncode(_catalogPayload(library))),
+      rootIndex[_libraryFile],
+      'application/json',
+    );
 
     // Only walk the per-book folders to upload media when there's media we
     // haven't uploaded yet — a metadata-only edit (done, BPM…) skips it, so the
@@ -692,8 +782,11 @@ class DriveSyncService extends ChangeNotifier {
     };
     if (mediaNames.difference(_uploadedMedia).isNotEmpty) {
       for (final b in library.allBooks) {
-        final bookFolderId =
-            await _ensureFolder(api, _bookFolderName(b), parentId: rootId);
+        final bookFolderId = await _ensureFolder(
+          api,
+          _bookFolderName(b),
+          parentId: rootId,
+        );
         final bookIndex = await _folderIndex(api, bookFolderId);
         if (b.coverPath != null) {
           await _uploadIfMissing(api, bookFolderId, bookIndex, b.coverPath!);
@@ -717,7 +810,10 @@ class DriveSyncService extends ChangeNotifier {
   /// Download the remote catalog and merge it into the local library, pulling
   /// any new/updated media first.
   Future<void> _pullMerge(
-      drive.DriveApi api, LibraryStore library, String rootId) async {
+    drive.DriveApi api,
+    LibraryStore library,
+    String rootId,
+  ) async {
     final rootIndex = await _folderIndex(api, rootId);
     final libId = rootIndex[_libraryFile];
     if (libId == null) return; // nothing on Drive yet
@@ -729,8 +825,9 @@ class DriveSyncService extends ChangeNotifier {
     final mtime = meta.modifiedTime?.toUtc().toIso8601String() ?? '';
     if (mtime.isNotEmpty && mtime == _remoteMtime) return;
 
-    final data = jsonDecode(utf8.decode(await _downloadBytes(api, libId)))
-        as Map<String, dynamic>;
+    final data =
+        jsonDecode(utf8.decode(await _downloadBytes(api, libId)))
+            as Map<String, dynamic>;
     _remoteMtime = mtime; // we've now seen this version
     final remoteSig = (data['signature'] as num?)?.toInt() ?? 0;
     if (remoteSig == _lastSeenRemoteSig) {
@@ -744,16 +841,18 @@ class DriveSyncService extends ChangeNotifier {
     final remoteTracks = ((data['tracks'] as List?) ?? [])
         .map((e) => Track.fromJson(e as Map<String, dynamic>))
         .toList();
-    final remoteDeleted = ((data['deleted'] as Map?) ?? {})
-        .map((k, v) => MapEntry(k as String, (v as num).toInt()));
+    final remoteDeleted = ((data['deleted'] as Map?) ?? {}).map(
+      (k, v) => MapEntry(k as String, (v as num).toInt()),
+    );
 
     // Index each book subfolder so we can fetch media by filename.
     final subfolders = await _listSubfolders(api, rootId);
     final bookIndex = <String, Map<String, String>>{};
     for (final b in remoteBooks) {
       final fid = subfolders[_bookFolderName(b)];
-      bookIndex[b.id] =
-          fid != null ? await _folderIndex(api, fid) : <String, String>{};
+      bookIndex[b.id] = fid != null
+          ? await _folderIndex(api, fid)
+          : <String, String>{};
     }
 
     final localBooks = {for (final b in library.allBooks) b.id: b};
@@ -765,10 +864,18 @@ class DriveSyncService extends ChangeNotifier {
       if (lt != null && lt.updatedAt >= t.updatedAt) continue;
       final idx = bookIndex[t.bookId] ?? const {};
       t.audioPath = await _fetchInto(
-          api, idx, p.basename(t.audioPath), library.audioDirPath);
+        api,
+        idx,
+        p.basename(t.audioPath),
+        library.audioDirPath,
+      );
       for (var i = 0; i < t.photoPaths.length; i++) {
         t.photoPaths[i] = await _fetchInto(
-            api, idx, p.basename(t.photoPaths[i]), library.photoDirPath);
+          api,
+          idx,
+          p.basename(t.photoPaths[i]),
+          library.photoDirPath,
+        );
       }
     }
     for (final b in remoteBooks) {
@@ -777,7 +884,11 @@ class DriveSyncService extends ChangeNotifier {
       if (lb != null && lb.updatedAt >= b.updatedAt) continue;
       final idx = bookIndex[b.id] ?? const {};
       b.coverPath = await _fetchInto(
-          api, idx, p.basename(b.coverPath!), library.coverDirPath);
+        api,
+        idx,
+        p.basename(b.coverPath!),
+        library.coverDirPath,
+      );
     }
 
     await library.mergeRemote(remoteBooks, remoteTracks, remoteDeleted);
@@ -790,8 +901,12 @@ class DriveSyncService extends ChangeNotifier {
 
   /// Download [name] from [index] into [destDir] (skips if already present);
   /// returns the local path.
-  Future<String> _fetchInto(drive.DriveApi api, Map<String, String> index,
-      String name, String destDir) async {
+  Future<String> _fetchInto(
+    drive.DriveApi api,
+    Map<String, String> index,
+    String name,
+    String destDir,
+  ) async {
     final dest = p.join(destDir, name);
     final fileId = index[name];
     if (fileId != null && !await File(dest).exists()) {
@@ -810,8 +925,9 @@ class DriveSyncService extends ChangeNotifier {
       final dir = await getApplicationSupportDirectory();
       _syncPrefsFile = File(p.join(dir.path, 'sync.json'));
       if (await _syncPrefsFile!.exists()) {
-        final j = jsonDecode(await _syncPrefsFile!.readAsString())
-            as Map<String, dynamic>;
+        final j =
+            jsonDecode(await _syncPrefsFile!.readAsString())
+                as Map<String, dynamic>;
         _autoSync = j['autoSync'] == true;
         _autoFolderId = j['folderId'] as String?;
         _autoFolderName = j['folderName'] as String?;
@@ -827,24 +943,25 @@ class DriveSyncService extends ChangeNotifier {
       debugPrint('Sync prefs load error: $e');
     }
     if (_deviceId.isEmpty) {
-      _deviceId =
-          'd${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}';
+      _deviceId = 'd${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}';
       await _saveSyncPrefs();
     }
   }
 
   Future<void> _saveSyncPrefs() async {
     try {
-      await _syncPrefsFile?.writeAsString(jsonEncode({
-        'autoSync': _autoSync,
-        'folderId': _autoFolderId,
-        'folderName': _autoFolderName,
-        'deviceId': _deviceId,
-        'syncedSig': _syncedSignature,
-        'remoteSig': _lastSeenRemoteSig,
-        'remoteMtime': _remoteMtime,
-        'uploadedMedia': _uploadedMedia.toList(),
-      }));
+      await _syncPrefsFile?.writeAsString(
+        jsonEncode({
+          'autoSync': _autoSync,
+          'folderId': _autoFolderId,
+          'folderName': _autoFolderName,
+          'deviceId': _deviceId,
+          'syncedSig': _syncedSignature,
+          'remoteSig': _lastSeenRemoteSig,
+          'remoteMtime': _remoteMtime,
+          'uploadedMedia': _uploadedMedia.toList(),
+        }),
+      );
     } catch (_) {}
   }
 
@@ -869,7 +986,8 @@ class DriveSyncService extends ChangeNotifier {
   Future<void> _loadCreds() async {
     try {
       if (!await _credsFile.exists()) return;
-      final j = jsonDecode(await _credsFile.readAsString()) as Map<String, dynamic>;
+      final j =
+          jsonDecode(await _credsFile.readAsString()) as Map<String, dynamic>;
       final at = j['accessToken'] as Map<String, dynamic>;
       _creds = AccessCredentials(
         AccessToken(

@@ -13,8 +13,11 @@ import '../ui/studio.dart';
 class PhotoViewerScreen extends StatefulWidget {
   final Track track;
   final int initialIndex;
-  const PhotoViewerScreen(
-      {super.key, required this.track, this.initialIndex = 0});
+  const PhotoViewerScreen({
+    super.key,
+    required this.track,
+    this.initialIndex = 0,
+  });
 
   @override
   State<PhotoViewerScreen> createState() => _PhotoViewerScreenState();
@@ -48,10 +51,17 @@ class _PhotoViewerScreenState extends State<PhotoViewerScreen> {
 
   Future<void> _delete(List<String> photos) async {
     if (photos.isEmpty) return;
-    final ok = await studioConfirm(context,
-        title: 'Delete this photo?', confirmLabel: 'Delete', destructive: true);
+    final ok = await studioConfirm(
+      context,
+      title: 'Delete this photo?',
+      confirmLabel: 'Delete',
+      destructive: true,
+    );
     if (ok && mounted) {
-      await context.read<LibraryStore>().removePhoto(widget.track, photos[_index]);
+      await context.read<LibraryStore>().removePhoto(
+        widget.track,
+        photos[_index],
+      );
     }
   }
 
@@ -66,27 +76,35 @@ class _PhotoViewerScreenState extends State<PhotoViewerScreen> {
       showBack: true,
       actions: [
         StudioIconButton(
-            icon: Icons.add_a_photo_outlined, tooltip: 'Add photo', onTap: _add),
+          icon: Icons.add_a_photo_outlined,
+          tooltip: 'Add photo',
+          onTap: _add,
+        ),
         if (photos.isNotEmpty)
           StudioIconButton(
-              icon: Icons.delete_outline,
-              tooltip: 'Delete photo',
-              onTap: () => _delete(photos)),
+            icon: Icons.delete_outline,
+            tooltip: 'Delete photo',
+            onTap: () => _delete(photos),
+          ),
       ],
       body: photos.isEmpty
           ? Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.photo_library_outlined,
-                      size: 64, color: Studio.textDim),
+                  Icon(
+                    Icons.photo_library_outlined,
+                    size: 64,
+                    color: Studio.textDim,
+                  ),
                   const SizedBox(height: 16),
-                  const Text('No photos yet', style: Studio.bodyDim),
+                  Text('No photos yet', style: Studio.bodyDim),
                   const SizedBox(height: 16),
                   StudioButton(
-                      label: 'Add Photo',
-                      icon: Icons.add_a_photo_outlined,
-                      onTap: _add),
+                    label: 'Add Photo',
+                    icon: Icons.add_a_photo_outlined,
+                    onTap: _add,
+                  ),
                 ],
               ),
             )
@@ -98,7 +116,8 @@ class _PhotoViewerScreenState extends State<PhotoViewerScreen> {
                 minScale: 1,
                 maxScale: 5,
                 child: Center(
-                    child: Image.file(File(photos[i]), fit: BoxFit.contain)),
+                  child: Image.file(File(photos[i]), fit: BoxFit.contain),
+                ),
               ),
             ),
     );

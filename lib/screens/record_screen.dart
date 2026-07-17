@@ -19,7 +19,11 @@ import '../ui/studio.dart';
 class RecordScreen extends StatefulWidget {
   final String bookId;
   final String bookTitle;
-  const RecordScreen({super.key, required this.bookId, required this.bookTitle});
+  const RecordScreen({
+    super.key,
+    required this.bookId,
+    required this.bookTitle,
+  });
 
   @override
   State<RecordScreen> createState() => _RecordScreenState();
@@ -145,7 +149,8 @@ class _RecordScreenState extends State<RecordScreen> {
       final dir = await getTemporaryDirectory();
       final f = File(p.join(dir.path, 'take_preview.wav'));
       await f.writeAsBytes(
-          _rec.exportWav(startFrac: _trimStart, endFrac: _trimEnd));
+        _rec.exportWav(startFrac: _trimStart, endFrac: _trimEnd),
+      );
       await _preview.setFilePath(f.path);
       await _preview.play();
     } catch (e) {
@@ -154,15 +159,19 @@ class _RecordScreenState extends State<RecordScreen> {
   }
 
   Future<void> _save() async {
-    final name = await studioPrompt(context,
-        title: 'Name this recording',
-        initial: 'Recording',
-        hint: 'e.g. Daramad — take 1');
+    final name = await studioPrompt(
+      context,
+      title: 'Name this recording',
+      initial: 'Recording',
+      hint: 'e.g. Daramad — take 1',
+    );
     if (name == null || !mounted) return;
     final wav = _rec.exportWav(startFrac: _trimStart, endFrac: _trimEnd);
-    await context
-        .read<LibraryStore>()
-        .addRecordedTrack(widget.bookId, wav, name);
+    await context.read<LibraryStore>().addRecordedTrack(
+      widget.bookId,
+      wav,
+      name,
+    );
     if (mounted) Navigator.of(context).pop();
   }
 
@@ -182,14 +191,12 @@ class _RecordScreenState extends State<RecordScreen> {
       showBack: true,
       actions: [
         StudioIconButton(
-            icon: Icons.tune,
-            tooltip: 'Recording settings',
-            onTap: _openSettings),
+          icon: Icons.tune,
+          tooltip: 'Recording settings',
+          onTap: _openSettings,
+        ),
       ],
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: _body(),
-      ),
+      body: Padding(padding: const EdgeInsets.all(16), child: _body()),
     );
   }
 
@@ -202,17 +209,17 @@ class _RecordScreenState extends State<RecordScreen> {
   }
 
   Widget _errorView() => Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.mic_off_outlined, size: 48, color: Studio.red),
-            const SizedBox(height: 14),
-            Text(_rec.error!, textAlign: TextAlign.center, style: Studio.bodyDim),
-            const SizedBox(height: 20),
-            StudioButton(label: 'Try again', onTap: _reset),
-          ],
-        ),
-      );
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.mic_off_outlined, size: 48, color: Studio.red),
+        const SizedBox(height: 14),
+        Text(_rec.error!, textAlign: TextAlign.center, style: Studio.bodyDim),
+        const SizedBox(height: 20),
+        StudioButton(label: 'Try again', onTap: _reset),
+      ],
+    ),
+  );
 
   Widget _captureView() {
     final recording = _rec.isRecording;
@@ -222,13 +229,14 @@ class _RecordScreenState extends State<RecordScreen> {
       children: [
         const Spacer(),
         if (_counting)
-          Text('$_countLeft',
-              style: Studio.numeric(96, color: Studio.amber))
+          Text('$_countLeft', style: Studio.numeric(96, color: Studio.amber))
         else
-          NumericReadout(_fmt(_rec.elapsed),
-              unit: active ? (paused ? 'PAUSED' : 'RECORDING') : 'READY',
-              size: 56,
-              color: recording ? Studio.amber : Studio.textPrimary),
+          NumericReadout(
+            _fmt(_rec.elapsed),
+            unit: active ? (paused ? 'PAUSED' : 'RECORDING') : 'READY',
+            size: 56,
+            color: recording ? Studio.amber : Studio.textPrimary,
+          ),
         const SizedBox(height: 24),
         _LevelMeter(level: recording ? _rec.level : 0),
         const Spacer(),
@@ -296,8 +304,10 @@ class _RecordScreenState extends State<RecordScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Selection ${_fmt(Duration(milliseconds: selMs))}',
-                style: Studio.bodyDim),
+            Text(
+              'Selection ${_fmt(Duration(milliseconds: selMs))}',
+              style: Studio.bodyDim,
+            ),
             Text('of ${_fmt(total)}', style: Studio.bodyDim),
           ],
         ),
@@ -316,15 +326,19 @@ class _RecordScreenState extends State<RecordScreen> {
           children: [
             Expanded(
               child: StudioButton(
-                  label: 'Re-record',
-                  icon: Icons.refresh,
-                  kind: StudioButtonKind.ghost,
-                  onTap: _reset),
+                label: 'Re-record',
+                icon: Icons.refresh,
+                kind: StudioButtonKind.ghost,
+                onTap: _reset,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: StudioButton(
-                  label: 'Save', icon: Icons.check, onTap: _save),
+                label: 'Save',
+                icon: Icons.check,
+                onTap: _save,
+              ),
             ),
           ],
         ),
@@ -367,26 +381,30 @@ class _RecordScreenState extends State<RecordScreen> {
                   // Tempo (drives count-in + click)
                   Row(
                     children: [
-                      const Expanded(
-                          child: Text('Tempo', style: Studio.title)),
+                      Expanded(child: Text('Tempo', style: Studio.title)),
                       _MiniStep(
-                          icon: Icons.remove,
-                          onTap: () {
-                            m.nudgeBpm(-1);
-                            refresh();
-                          }),
+                        icon: Icons.remove,
+                        onTap: () {
+                          m.nudgeBpm(-1);
+                          refresh();
+                        },
+                      ),
                       SizedBox(
                         width: 64,
                         child: Center(
-                            child: Text('${m.bpm}',
-                                style: Studio.numeric(18, color: Studio.amber))),
+                          child: Text(
+                            '${m.bpm}',
+                            style: Studio.numeric(18, color: Studio.amber),
+                          ),
+                        ),
                       ),
                       _MiniStep(
-                          icon: Icons.add,
-                          onTap: () {
-                            m.nudgeBpm(1);
-                            refresh();
-                          }),
+                        icon: Icons.add,
+                        onTap: () {
+                          m.nudgeBpm(1);
+                          refresh();
+                        },
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -409,7 +427,7 @@ class _RecordScreenState extends State<RecordScreen> {
                     },
                   ),
                   const SizedBox(height: 14),
-                  const Text('QUALITY', style: Studio.label),
+                  Text('QUALITY', style: Studio.label),
                   const SizedBox(height: 8),
                   Opacity(
                     opacity: _rec.state == RecState.idle ? 1 : 0.4,
@@ -446,12 +464,13 @@ class _RoundButton extends StatelessWidget {
   final double size;
   final VoidCallback? onTap;
   final String? label;
-  const _RoundButton(
-      {required this.icon,
-      required this.color,
-      required this.size,
-      this.onTap,
-      this.label});
+  const _RoundButton({
+    required this.icon,
+    required this.color,
+    required this.size,
+    this.onTap,
+    this.label,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -475,11 +494,14 @@ class _RoundButton extends StatelessWidget {
       ),
     );
     if (label == null) return btn;
-    return Column(mainAxisSize: MainAxisSize.min, children: [
-      btn,
-      const SizedBox(height: 8),
-      Text(label!, style: Studio.bodyDim),
-    ]);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        btn,
+        const SizedBox(height: 8),
+        Text(label!, style: Studio.bodyDim),
+      ],
+    );
   }
 }
 
@@ -491,27 +513,31 @@ class _LevelMeter extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const Icon(Icons.mic, size: 16, color: Studio.textSecondary),
+        Icon(Icons.mic, size: 16, color: Studio.textSecondary),
         const SizedBox(width: 10),
         Expanded(
           child: ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: SizedBox(
               height: 8,
-              child: Stack(children: [
-                Container(color: Studio.surfaceHigh),
-                FractionallySizedBox(
-                  widthFactor: level.clamp(0.0, 1.0),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: [
-                        Studio.teal,
-                        level > 0.85 ? Studio.red : Studio.amber,
-                      ]),
+              child: Stack(
+                children: [
+                  Container(color: Studio.surfaceHigh),
+                  FractionallySizedBox(
+                    widthFactor: level.clamp(0.0, 1.0),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Studio.teal,
+                            level > 0.85 ? Studio.red : Studio.amber,
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ]),
+                ],
+              ),
             ),
           ),
         ),
@@ -548,11 +574,12 @@ class _SheetToggle extends StatelessWidget {
   final String subtitle;
   final bool value;
   final ValueChanged<bool> onChanged;
-  const _SheetToggle(
-      {required this.title,
-      required this.subtitle,
-      required this.value,
-      required this.onChanged});
+  const _SheetToggle({
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -582,11 +609,12 @@ class _TrimWaveform extends StatefulWidget {
   final double startFrac;
   final double endFrac;
   final void Function(double start, double end) onChanged;
-  const _TrimWaveform(
-      {required this.bars,
-      required this.startFrac,
-      required this.endFrac,
-      required this.onChanged});
+  const _TrimWaveform({
+    required this.bars,
+    required this.startFrac,
+    required this.endFrac,
+    required this.onChanged,
+  });
 
   @override
   State<_TrimWaveform> createState() => _TrimWaveformState();
@@ -597,40 +625,41 @@ class _TrimWaveformState extends State<_TrimWaveform> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, c) {
-      final w = c.maxWidth;
-      double fracAt(double dx) => (dx / w).clamp(0.0, 1.0);
-      return GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onHorizontalDragStart: (d) {
-          final f = fracAt(d.localPosition.dx);
-          _active = (f - widget.startFrac).abs() <= (f - widget.endFrac).abs()
-              ? -1
-              : 1;
-          _apply(f);
-        },
-        onHorizontalDragUpdate: (d) => _apply(fracAt(d.localPosition.dx)),
-        child: SizedBox(
-          height: 120,
-          child: CustomPaint(
-            size: Size(w, 120),
-            painter: _TrimPainter(
+    return LayoutBuilder(
+      builder: (context, c) {
+        final w = c.maxWidth;
+        double fracAt(double dx) => (dx / w).clamp(0.0, 1.0);
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onHorizontalDragStart: (d) {
+            final f = fracAt(d.localPosition.dx);
+            _active = (f - widget.startFrac).abs() <= (f - widget.endFrac).abs()
+                ? -1
+                : 1;
+            _apply(f);
+          },
+          onHorizontalDragUpdate: (d) => _apply(fracAt(d.localPosition.dx)),
+          child: SizedBox(
+            height: 120,
+            child: CustomPaint(
+              size: Size(w, 120),
+              painter: _TrimPainter(
                 bars: widget.bars,
                 startFrac: widget.startFrac,
-                endFrac: widget.endFrac),
+                endFrac: widget.endFrac,
+              ),
+            ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
   }
 
   void _apply(double f) {
     if (_active == -1) {
-      widget.onChanged(
-          f.clamp(0.0, widget.endFrac - 0.02), widget.endFrac);
+      widget.onChanged(f.clamp(0.0, widget.endFrac - 0.02), widget.endFrac);
     } else {
-      widget.onChanged(
-          widget.startFrac, f.clamp(widget.startFrac + 0.02, 1.0));
+      widget.onChanged(widget.startFrac, f.clamp(widget.startFrac + 0.02, 1.0));
     }
   }
 }
@@ -639,8 +668,11 @@ class _TrimPainter extends CustomPainter {
   final List<double> bars;
   final double startFrac;
   final double endFrac;
-  _TrimPainter(
-      {required this.bars, required this.startFrac, required this.endFrac});
+  _TrimPainter({
+    required this.bars,
+    required this.startFrac,
+    required this.endFrac,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -677,13 +709,10 @@ class _TrimPainter extends CustomPainter {
     // Dim outside selection
     final dim = Paint()..color = Studio.bg.withValues(alpha: 0.45);
     canvas.drawRect(Rect.fromLTWH(0, 0, hx1, size.height), dim);
-    canvas.drawRect(
-        Rect.fromLTWH(hx2, 0, size.width - hx2, size.height), dim);
+    canvas.drawRect(Rect.fromLTWH(hx2, 0, size.width - hx2, size.height), dim);
   }
 
   @override
   bool shouldRepaint(covariant _TrimPainter old) =>
-      old.startFrac != startFrac ||
-      old.endFrac != endFrac ||
-      old.bars != bars;
+      old.startFrac != startFrac || old.endFrac != endFrac || old.bars != bars;
 }

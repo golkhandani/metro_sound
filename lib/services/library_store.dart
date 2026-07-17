@@ -22,7 +22,8 @@ class LibraryStore extends ChangeNotifier {
   static int _nowMs() => DateTime.now().millisecondsSinceEpoch;
 
   List<Book> get books {
-    final list = [..._books]..sort((a, b) {
+    final list = [..._books]
+      ..sort((a, b) {
         final byOrder = a.order.compareTo(b.order);
         return byOrder != 0 ? byOrder : a.title.compareTo(b.title);
       });
@@ -80,8 +81,11 @@ class LibraryStore extends ChangeNotifier {
   /// [remoteBooks]/[remoteTracks] must already have their media downloaded and
   /// their paths point at local files (the sync service does this first).
   /// Returns true if anything changed locally.
-  Future<bool> mergeRemote(List<Book> remoteBooks, List<Track> remoteTracks,
-      Map<String, int> remoteDeleted) async {
+  Future<bool> mergeRemote(
+    List<Book> remoteBooks,
+    List<Track> remoteTracks,
+    Map<String, int> remoteDeleted,
+  ) async {
     var changed = false;
 
     // Union tombstones (newest wins).
@@ -207,11 +211,16 @@ class LibraryStore extends ChangeNotifier {
         ..addAll(bookList.map((e) => Book.fromJson(e as Map<String, dynamic>)));
       _tracks
         ..clear()
-        ..addAll(trackList.map((e) => Track.fromJson(e as Map<String, dynamic>)));
+        ..addAll(
+          trackList.map((e) => Track.fromJson(e as Map<String, dynamic>)),
+        );
       _deleted
         ..clear()
-        ..addAll(((data['deleted'] as Map?) ?? {})
-            .map((k, v) => MapEntry(k as String, (v as num).toInt())));
+        ..addAll(
+          ((data['deleted'] as Map?) ?? {}).map(
+            (k, v) => MapEntry(k as String, (v as num).toInt()),
+          ),
+        );
       _rehomePaths();
       await _migrateOrphans();
       await save(); // persist the corrected paths
@@ -240,14 +249,11 @@ class LibraryStore extends ChangeNotifier {
   /// has no (or an unknown) book into a default book so nothing is lost.
   Future<void> _migrateOrphans() async {
     final knownIds = _books.map((b) => b.id).toSet();
-    final orphans =
-        _tracks.where((t) => t.bookId.isEmpty || !knownIds.contains(t.bookId));
-    if (orphans.isEmpty) return;
-    final defaultBook = Book(
-      id: _newId(),
-      title: 'My Practice',
-      order: 0,
+    final orphans = _tracks.where(
+      (t) => t.bookId.isEmpty || !knownIds.contains(t.bookId),
     );
+    if (orphans.isEmpty) return;
+    final defaultBook = Book(id: _newId(), title: 'My Practice', order: 0);
     _books.add(defaultBook);
     for (final t in orphans) {
       t.bookId = defaultBook.id;
@@ -342,8 +348,11 @@ class LibraryStore extends ChangeNotifier {
   /// Returns the number of tracks added. [driveIds], when given, is a parallel
   /// list tagging each source with the Google Drive file id it came from (used
   /// to dedupe re-syncs of a linked Drive folder).
-  Future<int> importAudioFiles(String bookId, List<String> sourcePaths,
-      {List<String?>? driveIds}) async {
+  Future<int> importAudioFiles(
+    String bookId,
+    List<String> sourcePaths, {
+    List<String?>? driveIds,
+  }) async {
     int added = 0;
     final existing = trackCount(bookId);
     for (var i = 0; i < sourcePaths.length; i++) {
@@ -354,15 +363,19 @@ class LibraryStore extends ChangeNotifier {
         final dest = p.join(_audioDir.path, '$id$ext');
         await File(src).copy(dest);
         final (order, title) = Track.parseFileName(src);
-        _tracks.add(Track(
-          id: id,
-          bookId: bookId,
-          title: title,
-          order: order == 0 ? existing + added + 1 : order,
-          audioPath: dest,
-          updatedAt: _nowMs(),
-          driveId: driveIds != null && i < driveIds.length ? driveIds[i] : null,
-        ));
+        _tracks.add(
+          Track(
+            id: id,
+            bookId: bookId,
+            title: title,
+            order: order == 0 ? existing + added + 1 : order,
+            audioPath: dest,
+            updatedAt: _nowMs(),
+            driveId: driveIds != null && i < driveIds.length
+                ? driveIds[i]
+                : null,
+          ),
+        );
         added++;
       } catch (e) {
         debugPrint('Import failed for $src: $e');
@@ -385,8 +398,11 @@ class LibraryStore extends ChangeNotifier {
   /// Everything the export isolate needs, as plain data: the manifest JSON plus
   /// the list of files to zip. Built on the main isolate (needs live library
   /// state); the isolate only reads files and writes the zip.
-  Future<ExportSpec> buildExportSpec(List<Book> books,
-      {List<Track>? onlyTracks, String? label}) async {
+  Future<ExportSpec> buildExportSpec(
+    List<Book> books, {
+    List<Track>? onlyTracks,
+    String? label,
+  }) async {
     final manifestBooks = <Map<String, dynamic>>[];
     final manifestTracks = <Map<String, dynamic>>[];
     final files = <(String, String)>[];
@@ -436,8 +452,8 @@ class LibraryStore extends ChangeNotifier {
       'books': manifestBooks,
       'tracks': manifestTracks,
     });
-    final base = label ??
-        (books.length == 1 ? books.first.title : 'MetroSound Library');
+    final base =
+        label ?? (books.length == 1 ? books.first.title : 'MetroSound Library');
     return ExportSpec(
       manifestJson: manifestJson,
       files: files,
@@ -478,8 +494,11 @@ class LibraryStore extends ChangeNotifier {
     required Map<String, String> extracted,
     Map<String, String?> bookTargets = const {},
   }) async {
-    Future<String?> claim(String? archiveName, Directory destDir,
-        String destBase) async {
+    Future<String?> claim(
+      String? archiveName,
+      Directory destDir,
+      String destBase,
+    ) async {
       if (archiveName == null) return null;
       final src = extracted[archiveName];
       if (src == null || !await File(src).exists()) return null;
@@ -505,8 +524,11 @@ class LibraryStore extends ChangeNotifier {
         // Adopt the package cover only if the local book has none.
         if (target.coverPath == null ||
             !await File(target.coverPath!).exists()) {
-          final cover =
-              await claim(bj['_cover'] as String?, _coverDir, target.id);
+          final cover = await claim(
+            bj['_cover'] as String?,
+            _coverDir,
+            target.id,
+          );
           if (cover != null) {
             target.coverPath = cover;
             target.updatedAt = _nowMs();
@@ -515,14 +537,16 @@ class LibraryStore extends ChangeNotifier {
       } else {
         final newId = _newId();
         idMap[pkgId] = newId;
-        _books.add(Book(
-          id: newId,
-          title: (bj['title'] as String?) ?? 'Shared book',
-          order: _books.length,
-          coverPath: await claim(bj['_cover'] as String?, _coverDir, newId),
-          originId: manifestShareId(bj),
-          updatedAt: _nowMs(),
-        ));
+        _books.add(
+          Book(
+            id: newId,
+            title: (bj['title'] as String?) ?? 'Shared book',
+            order: _books.length,
+            coverPath: await claim(bj['_cover'] as String?, _coverDir, newId),
+            originId: manifestShareId(bj),
+            updatedAt: _nowMs(),
+          ),
+        );
         booksAdded++;
       }
     }
@@ -535,9 +559,11 @@ class LibraryStore extends ChangeNotifier {
       if (appended.contains(localBookId)) {
         final sid = manifestShareId(tj);
         final title = ((tj['title'] as String?) ?? '').trim().toLowerCase();
-        final dup = _tracks.any((t) =>
-            t.bookId == localBookId &&
-            (t.shareId == sid || t.title.trim().toLowerCase() == title));
+        final dup = _tracks.any(
+          (t) =>
+              t.bookId == localBookId &&
+              (t.shareId == sid || t.title.trim().toLowerCase() == title),
+        );
         if (dup) {
           tracksSkipped++;
           continue;
@@ -545,34 +571,39 @@ class LibraryStore extends ChangeNotifier {
       }
 
       final newId = _newId();
-      final audioPath =
-          await claim(tj['_audio'] as String?, _audioDir, newId);
+      final audioPath = await claim(tj['_audio'] as String?, _audioDir, newId);
       if (audioPath == null) continue; // a track is nothing without its audio
       final photoPaths = <String>[];
       for (final pn in (tj['_photos'] as List?) ?? const []) {
         final ph = await claim(
-            pn as String, _photoDir, '${newId}_${photoPaths.length}');
+          pn as String,
+          _photoDir,
+          '${newId}_${photoPaths.length}',
+        );
         if (ph != null) photoPaths.add(ph);
       }
-      _tracks.add(Track(
-        id: newId,
-        bookId: localBookId,
-        title: (tj['title'] as String?) ?? 'Track',
-        order: appended.contains(localBookId)
-            ? trackCount(localBookId) + 1 // append at the end
-            : (tj['order'] as num?)?.toInt() ?? 0,
-        audioPath: audioPath,
-        bpm: (tj['bpm'] as num?)?.toInt() ?? 80,
-        beatsPerBar: (tj['beatsPerBar'] as num?)?.toInt() ?? 4,
-        timeSigDenominator: (tj['timeSigDenominator'] as num?)?.toInt() ?? 4,
-        metronomeOn: tj['metronomeOn'] as bool? ?? false,
-        syncOffsetMs: (tj['syncOffsetMs'] as num?)?.toInt() ?? 0,
-        speed: (tj['speed'] as num?)?.toDouble() ?? 1.0,
-        done: false, // recipient starts fresh
-        originId: manifestShareId(tj),
-        updatedAt: _nowMs(),
-        photoPaths: photoPaths,
-      ));
+      _tracks.add(
+        Track(
+          id: newId,
+          bookId: localBookId,
+          title: (tj['title'] as String?) ?? 'Track',
+          order: appended.contains(localBookId)
+              ? trackCount(localBookId) +
+                    1 // append at the end
+              : (tj['order'] as num?)?.toInt() ?? 0,
+          audioPath: audioPath,
+          bpm: (tj['bpm'] as num?)?.toInt() ?? 80,
+          beatsPerBar: (tj['beatsPerBar'] as num?)?.toInt() ?? 4,
+          timeSigDenominator: (tj['timeSigDenominator'] as num?)?.toInt() ?? 4,
+          metronomeOn: tj['metronomeOn'] as bool? ?? false,
+          syncOffsetMs: (tj['syncOffsetMs'] as num?)?.toInt() ?? 0,
+          speed: (tj['speed'] as num?)?.toDouble() ?? 1.0,
+          done: false, // recipient starts fresh
+          originId: manifestShareId(tj),
+          updatedAt: _nowMs(),
+          photoPaths: photoPaths,
+        ),
+      );
       tracksAdded++;
     }
 
@@ -585,7 +616,6 @@ class LibraryStore extends ChangeNotifier {
       tracksSkipped: tracksSkipped,
     );
   }
-
 
   Future<void> updateTrack(Track t) async {
     t.updatedAt = _nowMs();
@@ -615,18 +645,23 @@ class LibraryStore extends ChangeNotifier {
 
   /// Save a freshly recorded WAV as a new track in [bookId].
   Future<void> addRecordedTrack(
-      String bookId, List<int> wavBytes, String title) async {
+    String bookId,
+    List<int> wavBytes,
+    String title,
+  ) async {
     final id = _newId();
     final dest = p.join(_audioDir.path, '$id.wav');
     await File(dest).writeAsBytes(wavBytes);
-    _tracks.add(Track(
-      id: id,
-      bookId: bookId,
-      title: title.trim().isEmpty ? 'Recording' : title.trim(),
-      order: trackCount(bookId) + 1,
-      audioPath: dest,
-      updatedAt: _nowMs(),
-    ));
+    _tracks.add(
+      Track(
+        id: id,
+        bookId: bookId,
+        title: title.trim().isEmpty ? 'Recording' : title.trim(),
+        order: trackCount(bookId) + 1,
+        audioPath: dest,
+        updatedAt: _nowMs(),
+      ),
+    );
     await save();
     notifyListeners();
   }

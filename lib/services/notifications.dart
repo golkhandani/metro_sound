@@ -35,24 +35,28 @@ class Notifications {
     _permissionAsked = true;
     await init();
     try {
-      final ios = _plugin.resolvePlatformSpecificImplementation<
-          IOSFlutterLocalNotificationsPlugin>();
+      final ios = _plugin
+          .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin
+          >();
       await ios?.requestPermissions(alert: true, badge: false, sound: true);
-      final android = _plugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       await android?.requestNotificationsPermission();
     } catch (_) {}
   }
 
   static NotificationDetails get _details => const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'exports',
-          'Exports',
-          importance: Importance.high,
-          priority: Priority.high,
-        ),
-        iOS: DarwinNotificationDetails(),
-      );
+    android: AndroidNotificationDetails(
+      'exports',
+      'Exports',
+      importance: Importance.high,
+      priority: Priority.high,
+    ),
+    iOS: DarwinNotificationDetails(),
+  );
 
   static Future<void> showExportReady(String label) async {
     await init();

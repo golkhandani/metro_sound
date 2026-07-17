@@ -92,26 +92,27 @@ class _PackageProgressSheetState extends State<_PackageProgressSheet> {
   }
 
   Widget _empty(BuildContext context) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Padding(
-            padding: EdgeInsets.all(12),
-            child: Text('No export in progress', style: Studio.bodyDim),
-          ),
-          StudioButton(
-              label: 'Close',
-              kind: StudioButtonKind.ghost,
-              onTap: () => Navigator.of(context).pop()),
-        ],
-      );
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Padding(
+        padding: EdgeInsets.all(12),
+        child: Text('No export in progress', style: Studio.bodyDim),
+      ),
+      StudioButton(
+        label: 'Close',
+        kind: StudioButtonKind.ghost,
+        onTap: () => Navigator.of(context).pop(),
+      ),
+    ],
+  );
 
   Widget _body(BuildContext context, PackageService service, PackageJob job) {
     final (icon, title) = switch (job.state) {
       JobState.preparing => (Icons.hourglass_top, 'Preparing…'),
       JobState.running => (
-          job.kind == JobKind.export ? Icons.ios_share : Icons.download,
-          job.kind == JobKind.export ? 'Exporting…' : 'Importing…'
-        ),
+        job.kind == JobKind.export ? Icons.ios_share : Icons.download,
+        job.kind == JobKind.export ? 'Exporting…' : 'Importing…',
+      ),
       JobState.ready => (Icons.check_circle_outline, 'Ready to share'),
       JobState.done => (Icons.check_circle_outline, 'Import complete'),
       JobState.failed => (Icons.error_outline, 'Failed'),
@@ -128,28 +129,34 @@ class _PackageProgressSheetState extends State<_PackageProgressSheet> {
     detail.write('${job.filesDone}/${job.filesTotal} files');
     if (job.bytesTotal > 0) {
       detail.write(
-          ' · ${formatBytes(job.bytesDone)} of ${formatBytes(job.bytesTotal)}');
+        ' · ${formatBytes(job.bytesDone)} of ${formatBytes(job.bytesTotal)}',
+      );
     }
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(children: [
-          Icon(icon, color: accent, size: 22),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: Studio.title),
-                const SizedBox(height: 2),
-                Text(job.scopeLabel,
-                    style: Studio.bodyDim, overflow: TextOverflow.ellipsis),
-              ],
+        Row(
+          children: [
+            Icon(icon, color: accent, size: 22),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: Studio.title),
+                  const SizedBox(height: 2),
+                  Text(
+                    job.scopeLabel,
+                    style: Studio.bodyDim,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
-          ),
-        ]),
+          ],
+        ),
         const SizedBox(height: 14),
         if (job.isActive) ...[
           Text(detail.toString(), style: Studio.bodyDim),
@@ -158,13 +165,15 @@ class _PackageProgressSheetState extends State<_PackageProgressSheet> {
             borderRadius: BorderRadius.circular(3),
             child: SizedBox(
               height: 5,
-              child: Stack(children: [
-                Container(color: Studio.line),
-                FractionallySizedBox(
-                  widthFactor: job.progress.clamp(0.0, 1.0),
-                  child: Container(color: Studio.amber),
-                ),
-              ]),
+              child: Stack(
+                children: [
+                  Container(color: Studio.line),
+                  FractionallySizedBox(
+                    widthFactor: job.progress.clamp(0.0, 1.0),
+                    child: Container(color: Studio.amber),
+                  ),
+                ],
+              ),
             ),
           ),
         ] else if (job.state == JobState.failed)
@@ -173,19 +182,21 @@ class _PackageProgressSheetState extends State<_PackageProgressSheet> {
           Text(job.resultSummary ?? 'Import complete', style: Studio.bodyDim)
         else if (job.state == JobState.ready)
           Text(
-              'The package is ready'
-              '${job.bytesTotal > 0 ? ' (${formatBytes(job.bytesTotal)})' : ''}'
-              ' — share it anywhere.',
-              style: Studio.bodyDim),
+            'The package is ready'
+            '${job.bytesTotal > 0 ? ' (${formatBytes(job.bytesTotal)})' : ''}'
+            ' — share it anywhere.',
+            style: Studio.bodyDim,
+          ),
         const SizedBox(height: 16),
         Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
             if (job.isActive)
               StudioButton(
-                  label: 'Cancel',
-                  kind: StudioButtonKind.ghost,
-                  onTap: service.cancel)
+                label: 'Cancel',
+                kind: StudioButtonKind.ghost,
+                onTap: service.cancel,
+              )
             else ...[
               StudioButton(
                 label: job.state == JobState.ready ? 'Discard' : 'Close',
@@ -198,9 +209,10 @@ class _PackageProgressSheetState extends State<_PackageProgressSheet> {
               if (job.state == JobState.ready) ...[
                 const SizedBox(width: 12),
                 StudioButton(
-                    label: 'Share',
-                    icon: Icons.ios_share,
-                    onTap: () => _share(service)),
+                  label: 'Share',
+                  icon: Icons.ios_share,
+                  onTap: () => _share(service),
+                ),
               ],
             ],
           ],

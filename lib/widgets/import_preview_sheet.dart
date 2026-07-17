@@ -42,7 +42,9 @@ Future<void> runPackageImportFlow(BuildContext context) async {
 /// Preview of a shared package: pick which books and individual tracks to
 /// import. Returns the selection, or null if cancelled.
 Future<ImportSelection?> showImportPreviewSheet(
-    BuildContext context, PackagePreview preview) {
+  BuildContext context,
+  PackagePreview preview,
+) {
   return showModalBottomSheet<ImportSelection>(
     context: context,
     backgroundColor: Colors.transparent,
@@ -97,8 +99,7 @@ class _ImportPreviewSheetState extends State<_ImportPreviewSheet> {
   void _toggleBook(String bookId, List<Map<String, dynamic>> tracks) {
     setState(() {
       final ids = tracks.map((t) => t['id'] as String);
-      final allOn =
-          _books.contains(bookId) && ids.every(_tracks.contains);
+      final allOn = _books.contains(bookId) && ids.every(_tracks.contains);
       if (allOn) {
         _books.remove(bookId);
         _tracks.removeAll(ids);
@@ -153,35 +154,38 @@ class _ImportPreviewSheetState extends State<_ImportPreviewSheet> {
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 6),
               child: Row(
                 children: [
-                  const Icon(Icons.inventory_2_outlined,
-                      color: Studio.amber, size: 20),
+                  Icon(
+                    Icons.inventory_2_outlined,
+                    color: Studio.amber,
+                    size: 20,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Import package', style: Studio.title),
+                        Text('Import package', style: Studio.title),
                         const SizedBox(height: 2),
-                        Text(preview.fileName,
-                            style: Studio.bodyDim,
-                            overflow: TextOverflow.ellipsis),
+                        Text(
+                          preview.fileName,
+                          style: Studio.bodyDim,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ],
                     ),
                   ),
                 ],
               ),
             ),
-            const Divider(color: Studio.line, height: 16),
+            Divider(color: Studio.line, height: 16),
             Flexible(
               child: ListView(
                 shrinkWrap: true,
                 padding: const EdgeInsets.symmetric(horizontal: 8),
-                children: [
-                  for (final b in preview.books) ..._bookRows(b),
-                ],
+                children: [for (final b in preview.books) ..._bookRows(b)],
               ),
             ),
-            const Divider(color: Studio.line, height: 16),
+            Divider(color: Studio.line, height: 16),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
               child: Row(
@@ -195,9 +199,10 @@ class _ImportPreviewSheetState extends State<_ImportPreviewSheet> {
                     ),
                   ),
                   StudioButton(
-                      label: 'Cancel',
-                      kind: StudioButtonKind.ghost,
-                      onTap: () => Navigator.of(context).pop()),
+                    label: 'Cancel',
+                    kind: StudioButtonKind.ghost,
+                    onTap: () => Navigator.of(context).pop(),
+                  ),
                   const SizedBox(width: 12),
                   StudioButton(
                     label: 'Import',
@@ -211,9 +216,13 @@ class _ImportPreviewSheetState extends State<_ImportPreviewSheet> {
                                     ? _matches[id]?.id
                                     : null,
                             };
-                            Navigator.of(context).pop(ImportSelection(
-                                effectiveBooks, Set.of(_tracks),
-                                bookTargets: targets));
+                            Navigator.of(context).pop(
+                              ImportSelection(
+                                effectiveBooks,
+                                Set.of(_tracks),
+                                bookTargets: targets,
+                              ),
+                            );
                           },
                   ),
                 ],
@@ -228,9 +237,11 @@ class _ImportPreviewSheetState extends State<_ImportPreviewSheet> {
   List<Widget> _bookRows(Map<String, dynamic> b) {
     final bookId = b['id'] as String;
     final tracks = widget.preview.tracksForBook(bookId);
-    final selectedInBook =
-        tracks.where((t) => _tracks.contains(t['id'])).length;
-    final allOn = _books.contains(bookId) &&
+    final selectedInBook = tracks
+        .where((t) => _tracks.contains(t['id']))
+        .length;
+    final allOn =
+        _books.contains(bookId) &&
         (tracks.isEmpty || selectedInBook == tracks.length);
     final someOn = selectedInBook > 0 && !allOn;
     final expanded = _expanded.contains(bookId);
@@ -251,10 +262,11 @@ class _ImportPreviewSheetState extends State<_ImportPreviewSheet> {
                   children: [
                     Text(
                       (b['title'] as String?) ?? 'Book',
-                      style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Studio.textPrimary),
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Studio.textPrimary,
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                     if (match != null) ...[
@@ -288,11 +300,16 @@ class _ImportPreviewSheetState extends State<_ImportPreviewSheet> {
                   _check(_tracks.contains(t['id']), false),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text((t['title'] as String?) ?? 'Track',
-                        style: Studio.body, overflow: TextOverflow.ellipsis),
+                    child: Text(
+                      (t['title'] as String?) ?? 'Track',
+                      style: Studio.body,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  Text(formatBytes(widget.preview.trackSize(t)),
-                      style: Studio.bodyDim),
+                  Text(
+                    formatBytes(widget.preview.trackSize(t)),
+                    style: Studio.bodyDim,
+                  ),
                 ],
               ),
             ),
@@ -315,8 +332,11 @@ class _ImportPreviewSheetState extends State<_ImportPreviewSheet> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(append ? Icons.merge : Icons.copy_all,
-                size: 12, color: append ? Studio.amber : Studio.textSecondary),
+            Icon(
+              append ? Icons.merge : Icons.copy_all,
+              size: 12,
+              color: append ? Studio.amber : Studio.textSecondary,
+            ),
             const SizedBox(width: 5),
             Flexible(
               child: Text(
@@ -324,8 +344,9 @@ class _ImportPreviewSheetState extends State<_ImportPreviewSheet> {
                     ? 'Add new tracks to your "${match.title}"'
                     : 'Import as a separate copy',
                 style: TextStyle(
-                    fontSize: 11,
-                    color: append ? Studio.amber : Studio.textSecondary),
+                  fontSize: 11,
+                  color: append ? Studio.amber : Studio.textSecondary,
+                ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -336,18 +357,20 @@ class _ImportPreviewSheetState extends State<_ImportPreviewSheet> {
   }
 
   Widget _check(bool on, bool partial) => Container(
-        width: 22,
-        height: 22,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: on || partial ? Studio.amberSoft : Colors.transparent,
-          border: Border.all(
-              color: on || partial ? Studio.amber : Studio.line, width: 1.5),
-        ),
-        child: on
-            ? const Icon(Icons.check, size: 14, color: Studio.amber)
-            : partial
-                ? const Icon(Icons.remove, size: 14, color: Studio.amber)
-                : null,
-      );
+    width: 22,
+    height: 22,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      color: on || partial ? Studio.amberSoft : Colors.transparent,
+      border: Border.all(
+        color: on || partial ? Studio.amber : Studio.line,
+        width: 1.5,
+      ),
+    ),
+    child: on
+        ? Icon(Icons.check, size: 14, color: Studio.amber)
+        : partial
+        ? Icon(Icons.remove, size: 14, color: Studio.amber)
+        : null,
+  );
 }

@@ -214,10 +214,12 @@ class Recorder extends ChangeNotifier {
   static Uint8List _wav(Uint8List pcm, int sampleRate) {
     final out = BytesBuilder();
     void str(String x) => out.add(x.codeUnits);
-    void u32(int v) => out
-        .add((ByteData(4)..setUint32(0, v, Endian.little)).buffer.asUint8List());
-    void u16(int v) => out
-        .add((ByteData(2)..setUint16(0, v, Endian.little)).buffer.asUint8List());
+    void u32(int v) => out.add(
+      (ByteData(4)..setUint32(0, v, Endian.little)).buffer.asUint8List(),
+    );
+    void u16(int v) => out.add(
+      (ByteData(2)..setUint16(0, v, Endian.little)).buffer.asUint8List(),
+    );
 
     final dataLen = pcm.length;
     str('RIFF');

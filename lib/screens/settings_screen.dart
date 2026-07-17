@@ -121,6 +121,38 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          const SectionLabel('Appearance', icon: Icons.brightness_6_outlined),
+          const SizedBox(height: 12),
+          StudioCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Builder(
+                  builder: (context) {
+                    final mode = context.select<AppSettings, String>(
+                      (s) => s.themeMode,
+                    );
+                    return StudioSegmented<String>(
+                      selected: mode,
+                      options: const [
+                        ('system', 'System'),
+                        ('light', 'Light'),
+                        ('dark', 'Dark'),
+                      ],
+                      onChanged: (m) =>
+                          context.read<AppSettings>().setThemeMode(m),
+                    );
+                  },
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'System follows your iPhone appearance automatically.',
+                  style: Studio.bodyDim,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 28),
           const SectionLabel('Metronome', icon: Icons.av_timer),
           const SizedBox(height: 12),
           StudioCard(
@@ -136,7 +168,7 @@ class SettingsScreen extends StatelessWidget {
                   value: m.lockedToMusic,
                   onChanged: m.setLockedToMusic,
                 ),
-                const Padding(
+                Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),
                   child: Divider(color: Studio.line, height: 1),
                 ),
@@ -178,7 +210,7 @@ class SettingsScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   'Share sends your whole library as one file (any channel — '
                   'AirDrop, Messages, Drive…). Import adds a library someone '
                   'sent you. You can also share a single book from inside it.',
@@ -195,7 +227,7 @@ class SettingsScreen extends StatelessWidget {
             if (!drive.configured)
               StudioCard(
                 color: Studio.red.withValues(alpha: 0.12),
-                child: const Text(
+                child: Text(
                   'Google Drive is not configured. Add your OAuth client ID/'
                   'secret to env.json and rebuild with '
                   '--dart-define-from-file=env.json.',
@@ -262,7 +294,7 @@ class SettingsScreen extends StatelessWidget {
                             size: 22,
                           ),
                           const SizedBox(width: 12),
-                          const Expanded(
+                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -302,11 +334,11 @@ class SettingsScreen extends StatelessWidget {
                           ],
                         ),
                       ],
-                      const Padding(
+                      Padding(
                         padding: EdgeInsets.symmetric(vertical: 12),
                         child: Divider(color: Studio.line, height: 1),
                       ),
-                      const Text(
+                      Text(
                         'How it works:\n'
                         '• Your edits (done, BPM, photos, names…) upload to your '
                         '"Metro Sound" Drive folder a few seconds after each change.\n'
@@ -349,7 +381,7 @@ class SettingsScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    const Text(
+                    Text(
                       'Backs up audio, photos, covers and progress into a '
                       '"Metro Sound" folder (created inside the folder you pick, '
                       'with a subfolder per book). Load replaces the local catalog.',
@@ -364,7 +396,7 @@ class SettingsScreen extends StatelessWidget {
                   child: Row(
                     children: [
                       if (drive.busy) ...[
-                        const SizedBox(
+                        SizedBox(
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(
@@ -396,9 +428,9 @@ class SettingsScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    const Icon(Icons.replay, color: Studio.amber, size: 22),
+                    Icon(Icons.replay, color: Studio.amber, size: 22),
                     const SizedBox(width: 12),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -411,11 +443,7 @@ class SettingsScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const Icon(
-                      Icons.chevron_right,
-                      color: Studio.textDim,
-                      size: 20,
-                    ),
+                    Icon(Icons.chevron_right, color: Studio.textDim, size: 20),
                   ],
                 ),
               ),
@@ -486,14 +514,14 @@ class _About extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: Studio.line),
             ),
-            child: const Icon(Icons.av_timer, color: Studio.amber, size: 30),
+            child: Icon(Icons.av_timer, color: Studio.amber, size: 30),
           ),
           const SizedBox(height: 10),
           Text('Metro Sound', style: Studio.title.copyWith(letterSpacing: 0.5)),
           const SizedBox(height: 2),
           Text('Version $kAppVersion', style: Studio.bodyDim),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             'Practice player · metronome · photos',
             style: TextStyle(fontSize: 11, color: Studio.textDim),
           ),

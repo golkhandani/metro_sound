@@ -96,14 +96,9 @@ class Metronome extends ChangeNotifier {
   // Persisted preferences (visual + lock).
   File? _prefsFile;
 
-  Future<void> init() async {
-    try {
-      // The clicks share one audio session with the just_audio music player.
-      // audioplayers' DEFAULT context takes exclusive playback focus, so every
-      // click (re)activated the session against the music — metronome use
-      // audibly disturbed other audio. Make the click players cooperative:
-      // mix with other audio on iOS, take no audio focus on Android.
-      await AudioPlayer.global.setAudioContext(AudioContext(
+  /// The cooperative playback session shared with the just_audio music player:
+  /// mix with other audio on iOS, take no audio focus on Android.
+  static AudioContext get _playbackContext => AudioContext(
         iOS: AudioContextIOS(
           category: AVAudioSessionCategory.playback,
           options: const {AVAudioSessionOptions.mixWithOthers},
@@ -113,9 +108,30 @@ class Metronome extends ChangeNotifier {
           usageType: AndroidUsageType.media,
           audioFocus: AndroidAudioFocus.none,
         ),
-      ));
+      );
+
+  /// Re-assert the playback session. The tuner (and recorder) switch the
+  /// shared iOS session into a record category, which lowers playback volume;
+  /// call this after they stop so music/click volume comes back.
+  Future<void> restorePlaybackSession() async {
+    try {
+      await AudioPlayer.global.setAudioContext(_playbackContext);
+    } catch (e) {
+      debugPrint('restorePlaybackSession: $e');
+    }
+  }
+
+  Future<void> init() async {
+    try {
+      // The clicks share one audio session with the just_audio music player.
+      // audioplayers' DEFAULT context takes exclusive playback focus, so every
+      // click (re)activated the session against the music — metronome use
+      // audibly disturbed other audio. Make the click players cooperative.
+      await AudioPlayer.global.setAudioContext(_playbackContext);
       for (final pl in [_accent, _click]) {
-        await pl.setReleaseMode(ReleaseMode.stop); // keep source ready for replay
+        await pl.setReleaseMode(
+          ReleaseMode.stop,
+        ); // keep source ready for replay
       }
       // Warm up the sources so the first click has no load delay.
       await _accent.setSource(_accentSrc);
@@ -129,7 +145,8 @@ class Metronome extends ChangeNotifier {
       _prefsFile = File(p.join(dir.path, 'metronome.json'));
       if (await _prefsFile!.exists()) {
         final j =
-            jsonDecode(await _prefsFile!.readAsString()) as Map<String, dynamic>;
+            jsonDecode(await _prefsFile!.readAsString())
+                as Map<String, dynamic>;
         if (j['visual'] is bool) _visualEnabled = j['visual'] as bool;
         if (j['lock'] is bool) _locked = j['lock'] as bool;
         notifyListeners();
@@ -141,8 +158,9 @@ class Metronome extends ChangeNotifier {
 
   Future<void> _savePrefs() async {
     try {
-      await _prefsFile
-          ?.writeAsString(jsonEncode({'visual': _visualEnabled, 'lock': _locked}));
+      await _prefsFile?.writeAsString(
+        jsonEncode({'visual': _visualEnabled, 'lock': _locked}),
+      );
     } catch (_) {}
   }
 
@@ -226,7 +244,8 @@ class Metronome extends ChangeNotifier {
   int _boundaryIndex(double posMs) =>
       ((posMs - _syncOffsetMs) / _beatMsTrack()).floor();
 
-  int _beatInBar(int idx) => ((idx % _beatsPerBar) + _beatsPerBar) % _beatsPerBar;
+  int _beatInBar(int idx) =>
+      ((idx % _beatsPerBar) + _beatsPerBar) % _beatsPerBar;
 
   void _lockArm() {
     _lockCancel();
@@ -235,8 +254,10 @@ class Metronome extends ChangeNotifier {
     _inFallback = false;
     // Poll the (interpolated) music position frequently and click when we cross
     // a beat boundary.
-    _lockTimer =
-        Timer.periodic(const Duration(milliseconds: 10), (_) => _lockPoll());
+    _lockTimer = Timer.periodic(
+      const Duration(milliseconds: 10),
+      (_) => _lockPoll(),
+    );
   }
 
   void _lockCancel() {
@@ -321,10 +342,7 @@ class Metronome extends ChangeNotifier {
     } else {
       _sw.start(); // elapsed time continues from where it froze
       final delayUs = _nextBeatUs - _sw.elapsedMicroseconds;
-      _timer = Timer(
-        Duration(microseconds: delayUs < 0 ? 0 : delayUs),
-        _tick,
-      );
+      _timer = Timer(Duration(microseconds: delayUs < 0 ? 0 : delayUs), _tick);
     }
     notifyListeners();
   }
@@ -348,10 +366,7 @@ class Metronome extends ChangeNotifier {
 
     _nextBeatUs += _intervalUs();
     final delayUs = _nextBeatUs - _sw.elapsedMicroseconds;
-    _timer = Timer(
-      Duration(microseconds: delayUs < 0 ? 0 : delayUs),
-      _tick,
-    );
+    _timer = Timer(Duration(microseconds: delayUs < 0 ? 0 : delayUs), _tick);
   }
 
   void _fireBeat(int beat) {
@@ -361,9 +376,9 @@ class Metronome extends ChangeNotifier {
       final src = accent ? _accentSrc : _clickSrc;
       // Replay the preloaded click from the start. play() restarts cleanly even
       // if the previous click is still ringing out.
-      pl.play(src, volume: _volume).catchError(
-            (e) => debugPrint('click error: $e'),
-          );
+      pl
+          .play(src, volume: _volume)
+          .catchError((e) => debugPrint('click error: $e'));
     }
     _beatController.add(beat);
     notifyListeners();

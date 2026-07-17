@@ -337,7 +337,7 @@ class _TrackRowState extends State<_TrackRow> {
                     ),
                   ),
                   child: t.done
-                      ? const Icon(Icons.check, size: 17, color: Studio.bg)
+                      ? Icon(Icons.check, size: 17, color: Studio.bg)
                       : null,
                 ),
               ),
@@ -404,7 +404,7 @@ class _TrackRowState extends State<_TrackRow> {
               // still opens the player.
               ReorderableDragStartListener(
                 index: widget.index,
-                child: const MouseRegion(
+                child: MouseRegion(
                   cursor: SystemMouseCursors.grab,
                   child: Padding(
                     padding: EdgeInsets.only(left: 2),
@@ -435,15 +435,11 @@ class _Empty extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
-            Icons.queue_music_outlined,
-            size: 64,
-            color: Studio.textDim,
-          ),
+          Icon(Icons.queue_music_outlined, size: 64, color: Studio.textDim),
           const SizedBox(height: 16),
-          const Text('No tracks yet', style: Studio.title),
+          Text('No tracks yet', style: Studio.title),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'Import mp3 files or record a new one to get started.',
             style: Studio.bodyDim,
           ),

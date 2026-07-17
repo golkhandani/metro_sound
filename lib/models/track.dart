@@ -7,7 +7,8 @@ class Track {
   String bookId; // which book/folder this track belongs to
   String title;
   int order;
-  String audioPath; // absolute path inside the app's storage (rewritten on Drive load)
+  String
+  audioPath; // absolute path inside the app's storage (rewritten on Drive load)
 
   // Per-track metronome preset
   int bpm;
@@ -15,7 +16,8 @@ class Track {
   int timeSigDenominator; // time signature denominator (4, 8, 2…)
   bool metronomeOn;
   int syncOffsetMs; // manual metronome-vs-music alignment
-  double speed; // playback speed multiplier for music + metronome (1.0 = normal)
+  double
+  speed; // playback speed multiplier for music + metronome (1.0 = normal)
 
   // Whether the learner has marked this lesson as done.
   bool done;
@@ -76,41 +78,41 @@ class Track {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'bookId': bookId,
-        'title': title,
-        'order': order,
-        'audioPath': audioPath,
-        'bpm': bpm,
-        'beatsPerBar': beatsPerBar,
-        'timeSigDenominator': timeSigDenominator,
-        'metronomeOn': metronomeOn,
-        'syncOffsetMs': syncOffsetMs,
-        'speed': speed,
-        'done': done,
-        'updatedAt': updatedAt,
-        'driveId': driveId,
-        'originId': originId,
-        'photoPaths': photoPaths,
-      };
+    'id': id,
+    'bookId': bookId,
+    'title': title,
+    'order': order,
+    'audioPath': audioPath,
+    'bpm': bpm,
+    'beatsPerBar': beatsPerBar,
+    'timeSigDenominator': timeSigDenominator,
+    'metronomeOn': metronomeOn,
+    'syncOffsetMs': syncOffsetMs,
+    'speed': speed,
+    'done': done,
+    'updatedAt': updatedAt,
+    'driveId': driveId,
+    'originId': originId,
+    'photoPaths': photoPaths,
+  };
 
   factory Track.fromJson(Map<String, dynamic> j) => Track(
-        id: j['id'] as String,
-        bookId: j['bookId'] as String? ?? '',
-        title: j['title'] as String,
-        order: (j['order'] as num?)?.toInt() ?? 0,
-        audioPath: j['audioPath'] as String,
-        bpm: (j['bpm'] as num?)?.toInt() ?? 80,
-        beatsPerBar: (j['beatsPerBar'] as num?)?.toInt() ?? 4,
-        timeSigDenominator: (j['timeSigDenominator'] as num?)?.toInt() ?? 4,
-        metronomeOn: j['metronomeOn'] as bool? ?? false,
-        syncOffsetMs: (j['syncOffsetMs'] as num?)?.toInt() ?? 0,
-        speed: (j['speed'] as num?)?.toDouble() ?? 1.0,
-        done: j['done'] as bool? ?? false,
-        updatedAt: (j['updatedAt'] as num?)?.toInt() ?? 0,
-        driveId: j['driveId'] as String?,
-        originId: j['originId'] as String?,
-        photoPaths:
-            (j['photoPaths'] as List?)?.map((e) => e as String).toList() ?? [],
-      );
+    id: j['id'] as String,
+    bookId: j['bookId'] as String? ?? '',
+    title: j['title'] as String,
+    order: (j['order'] as num?)?.toInt() ?? 0,
+    audioPath: j['audioPath'] as String,
+    bpm: (j['bpm'] as num?)?.toInt() ?? 80,
+    beatsPerBar: (j['beatsPerBar'] as num?)?.toInt() ?? 4,
+    timeSigDenominator: (j['timeSigDenominator'] as num?)?.toInt() ?? 4,
+    metronomeOn: j['metronomeOn'] as bool? ?? false,
+    syncOffsetMs: (j['syncOffsetMs'] as num?)?.toInt() ?? 0,
+    speed: (j['speed'] as num?)?.toDouble() ?? 1.0,
+    done: j['done'] as bool? ?? false,
+    updatedAt: (j['updatedAt'] as num?)?.toInt() ?? 0,
+    driveId: j['driveId'] as String?,
+    originId: j['originId'] as String?,
+    photoPaths:
+        (j['photoPaths'] as List?)?.map((e) => e as String).toList() ?? [],
+  );
 }
