@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+// Prefixed: audio_session and audioplayers both export AVAudioSession* names.
+import 'package:audio_session/audio_session.dart' as av;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
@@ -118,6 +120,22 @@ class Metronome extends ChangeNotifier {
       await AudioPlayer.global.setAudioContext(_playbackContext);
     } catch (e) {
       debugPrint('restorePlaybackSession: $e');
+    }
+    // The mic (flutter_audio_capture) also puts the session in .measurement
+    // MODE, which audioplayers' setAudioContext can't undo — setCategory
+    // without a mode argument leaves the old mode in place, and .measurement
+    // disables the speaker's output processing, so playback stays quiet.
+    // Reset category + mode together at the AVAudioSession level.
+    if (!kIsWeb && Platform.isIOS) {
+      try {
+        await av.AVAudioSession().setCategory(
+          av.AVAudioSessionCategory.playback,
+          av.AVAudioSessionCategoryOptions.mixWithOthers,
+          av.AVAudioSessionMode.defaultMode,
+        );
+      } catch (e) {
+        debugPrint('restorePlaybackSession (mode reset): $e');
+      }
     }
   }
 

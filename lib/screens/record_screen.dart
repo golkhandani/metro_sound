@@ -70,6 +70,9 @@ class _RecordScreenState extends State<RecordScreen> {
     _metro.stop();
     _rec.dispose();
     _preview.dispose();
+    // If we leave mid-recording the mic still owns the session; hand it back
+    // to playback once the capture engine has torn down.
+    Future.delayed(const Duration(milliseconds: 150), _metro.restorePlaybackSession);
     super.dispose();
   }
 
@@ -123,6 +126,12 @@ class _RecordScreenState extends State<RecordScreen> {
   Future<void> _stop() async {
     _metro.stop();
     await _rec.stop();
+    // Same as leaving the tuner tab: the mic left the shared session in a
+    // record category + measurement mode, which keeps playback quiet. Let the
+    // engine tear down, then restore the playback session for the preview.
+    await Future.delayed(const Duration(milliseconds: 150));
+    await _metro.restorePlaybackSession();
+    if (!mounted) return;
     setState(() {
       _trimStart = 0;
       _trimEnd = 1;
@@ -133,6 +142,9 @@ class _RecordScreenState extends State<RecordScreen> {
     await _preview.stop();
     _metro.stop();
     await _rec.reset();
+    await Future.delayed(const Duration(milliseconds: 150));
+    await _metro.restorePlaybackSession();
+    if (!mounted) return;
     setState(() {
       _trimStart = 0;
       _trimEnd = 1;
