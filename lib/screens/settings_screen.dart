@@ -6,11 +6,13 @@ import '../services/drive_sync.dart';
 import '../services/library_store.dart';
 import '../services/metronome.dart';
 import '../services/package_service.dart';
+import '../services/pro.dart';
 import '../services/settings.dart';
 import '../ui/studio.dart';
 import '../widgets/coach_marks.dart';
 import '../widgets/import_preview_sheet.dart';
 import '../widgets/package_progress_sheet.dart';
+import '../widgets/pro_sheet.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -68,8 +70,19 @@ class SettingsScreen extends StatelessWidget {
 
   /// Pick a shared `.metrosound` file, preview its contents, choose which
   /// books/tracks to import (append or new copy), then import in background.
-  Future<void> _importShared(BuildContext context) =>
-      runPackageImportFlow(context);
+  Future<void> _importShared(BuildContext context) async {
+    final pro = context.read<Pro>();
+    final library = context.read<LibraryStore>();
+    if (!pro.isPro && library.books.length >= Pro.freeBookLimit) {
+      return showProSheet(
+        context,
+        reason:
+            'The free version holds up to ${Pro.freeBookLimit} books. '
+            'Unlock Pro for an unlimited library.',
+      );
+    }
+    return runPackageImportFlow(context);
+  }
 
   Future<void> _load(BuildContext context) async {
     final drive = context.read<DriveSyncService>();
@@ -121,6 +134,15 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          if (context.watch<Pro>().supported) ...[
+            const SectionLabel(
+              'Metro Sound Pro',
+              icon: Icons.workspace_premium_outlined,
+            ),
+            const SizedBox(height: 12),
+            const _ProCard(),
+            const SizedBox(height: 28),
+          ],
           const SectionLabel('Appearance', icon: Icons.brightness_6_outlined),
           const SizedBox(height: 12),
           StudioCard(
@@ -524,6 +546,61 @@ class _About extends StatelessWidget {
           Text(
             'Practice player · metronome · photos',
             style: TextStyle(fontSize: 11, color: Studio.textDim),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Purchase state card: an upgrade pitch for free users, a thank-you for Pro.
+class _ProCard extends StatelessWidget {
+  const _ProCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final pro = context.watch<Pro>();
+    if (pro.isPro) {
+      return StudioCard(
+        child: Row(
+          children: [
+            Icon(Icons.verified_outlined, size: 20, color: Studio.amber),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Pro unlocked — thank you for supporting Metro Sound!',
+                style: Studio.body,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return StudioCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Unlimited books, the practice recorder, and no reminders — '
+            'one purchase, yours forever.',
+            style: Studio.bodyDim,
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              StudioButton(
+                label: 'Unlock Pro — ${pro.price}',
+                icon: Icons.lock_open_outlined,
+                onTap: () => showProSheet(context),
+              ),
+              StudioButton(
+                label: 'Restore purchase',
+                kind: StudioButtonKind.ghost,
+                onTap: pro.restore,
+              ),
+            ],
           ),
         ],
       ),

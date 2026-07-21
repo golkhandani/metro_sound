@@ -63,7 +63,22 @@
       "Bash(/usr/libexec/PlistBuddy -c \"Set :NSMicrophoneUsageDescription 'Metro Sound uses the microphone to tune your instrument and record practice tracks.'\" ios/Runner/Info.plist)",
       "Bash(flutter pub *)",
       "Bash(flutter config *)",
-      "Bash(flutter create *)"
+      "Bash(flutter create *)",
+      "Bash(xcrun --sdk iphoneos --show-sdk-path)",
+      "Bash(grep -B8 'setCategory:\\(AVAudioSessionCategory\\)category withOptions:' __CMDSUB_OUTPUT__/System/Library/Frameworks/AVFAudio.framework/Headers/AVAudioSession.h)",
+      "Bash(flutter test *)",
+      "Bash(pod install *)",
+      "Bash(git -C /Users/mrzg/Work/metro_sound log --oneline -3)",
+      "Bash(git -C /Users/mrzg/Work/metro_sound status --short)",
+      "Bash(xcrun notarytool *)",
+      "Bash(security find-generic-password *)",
+      "Bash(git commit -m ' *)",
+      "Bash(DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer flutter build ipa --release --export-options-plist=ios/ExportOptions.plist)",
+      "Bash(/usr/libexec/PlistBuddy -c 'Print :ApplicationProperties:CFBundleVersion' /Users/mrzg/Work/metro_sound/build/ios/archive/Runner.xcarchive/Info.plist)",
+      "Read(//Users/mrzg/Library/Logs/**)",
+      "Bash(DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -exportArchive -archivePath /Users/mrzg/Work/metro_sound/build/ios/archive/Runner.xcarchive -exportOptionsPlist /Users/mrzg/Work/metro_sound/ios/ExportOptions.plist -exportPath /private/tmp/claude-501/-Users-mrzg-Work-metro-sound/c95b3f85-9afa-425e-b3fe-e20590c5744e/scratchpad/export)",
+      "Bash(DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer flutter build ios --debug --no-codesign)",
+      "Bash(sips -g pixelWidth -g pixelHeight /Users/mrzg/Work/metro_sound/store_screenshots/*.png)"
     ]
   }
 }

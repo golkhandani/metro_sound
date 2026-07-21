@@ -7,6 +7,7 @@ import 'services/drive_sync.dart';
 import 'services/library_store.dart';
 import 'services/metronome.dart';
 import 'services/package_service.dart';
+import 'services/pro.dart';
 import 'dev/screenshot_director.dart';
 import 'services/sample_library.dart';
 import 'services/settings.dart';
@@ -24,12 +25,14 @@ Future<void> main() async {
   final drive = DriveSyncService();
   final settings = AppSettings();
   final packages = PackageService();
+  final pro = Pro();
   await Future.wait([
     library.init(),
     metronome.init(),
     if (driveSyncEnabled) drive.init(),
     settings.init(),
     packages.init(),
+    pro.init(),
   ]);
   // Wire the library into Drive sync so two-way auto-sync can observe edits.
   // (Skipped while the feature is hidden — no Google sign-in work at launch.)
@@ -47,6 +50,7 @@ Future<void> main() async {
       drive: drive,
       settings: settings,
       packages: packages,
+      pro: pro,
     ),
   );
 }
@@ -57,6 +61,7 @@ class MetroSoundApp extends StatefulWidget {
   final DriveSyncService drive;
   final AppSettings settings;
   final PackageService packages;
+  final Pro pro;
   const MetroSoundApp({
     super.key,
     required this.library,
@@ -64,6 +69,7 @@ class MetroSoundApp extends StatefulWidget {
     required this.drive,
     required this.settings,
     required this.packages,
+    required this.pro,
   });
 
   @override
@@ -89,6 +95,13 @@ class _MetroSoundAppState extends State<MetroSoundApp>
     setState(() {}); // re-resolve when 'system' mode follows the OS
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Returning to the app after a while counts as a new practice session
+    // (Pro debounces to at most one per half hour).
+    if (state == AppLifecycleState.resumed) widget.pro.maybeCountSession();
+  }
+
   Brightness _resolve(String mode) => switch (mode) {
     'light' => Brightness.light,
     'dark' => Brightness.dark,
@@ -104,6 +117,7 @@ class _MetroSoundAppState extends State<MetroSoundApp>
         ChangeNotifierProvider.value(value: widget.drive),
         ChangeNotifierProvider.value(value: widget.settings),
         ChangeNotifierProvider.value(value: widget.packages),
+        ChangeNotifierProvider.value(value: widget.pro),
         ChangeNotifierProvider(create: (_) => AudioController()),
         ChangeNotifierProvider(create: (_) => Tuner()),
       ],

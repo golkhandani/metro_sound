@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../services/metronome.dart';
+import '../services/pro.dart';
 import '../services/tuner.dart';
 import '../ui/studio.dart';
 import '../dev/screenshot_director.dart';
 import '../widgets/coach_marks.dart';
+import '../widgets/pro_sheet.dart';
 import 'books_screen.dart';
 import 'metronome_screen.dart';
 import 'settings_screen.dart';
@@ -92,6 +94,17 @@ class _RootShellState extends State<RootShell> {
         CoachMarks.maybeShow(context, _screenIds[i]);
       }
     });
+    // The polite Pro reminder: only as a metronome/tuner session ENDS (never
+    // blocking the moment of use), only after enough sessions, once a day.
+    if (leavingMetronome || leavingTuner) {
+      final pro = context.read<Pro>();
+      if (pro.shouldNag) {
+        pro.markNagged();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _index == i) showProSheet(context);
+        });
+      }
+    }
   }
 
   @override

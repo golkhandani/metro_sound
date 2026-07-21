@@ -8,10 +8,12 @@ import '../models/track.dart';
 import '../services/audio_controller.dart';
 import '../services/library_store.dart';
 import '../services/package_service.dart';
+import '../services/pro.dart';
 import '../services/recorder.dart';
 import '../ui/studio.dart';
 import '../widgets/coach_marks.dart';
 import '../widgets/package_progress_sheet.dart';
+import '../widgets/pro_sheet.dart';
 import 'player_screen.dart';
 import 'record_screen.dart';
 
@@ -56,6 +58,15 @@ class BookScreen extends StatelessWidget {
   }
 
   void _record(BuildContext context) {
+    // The recorder is a Pro feature; the mic button stays visible so it's
+    // discoverable, and tapping it explains the unlock.
+    if (!context.read<Pro>().isPro) {
+      showProSheet(
+        context,
+        reason: 'Recording your own practice takes is a Pro feature.',
+      );
+      return;
+    }
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => RecordScreen(bookId: book.id, bookTitle: book.title),

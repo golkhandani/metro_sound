@@ -7,16 +7,36 @@ import 'package:provider/provider.dart';
 import '../models/book.dart';
 import '../services/library_store.dart';
 import '../services/package_service.dart';
+import '../services/pro.dart';
 import '../ui/studio.dart';
 import '../widgets/coach_marks.dart';
 import '../widgets/import_preview_sheet.dart';
 import '../widgets/package_progress_sheet.dart';
+import '../widgets/pro_sheet.dart';
 import 'book_screen.dart';
 
 class BooksScreen extends StatelessWidget {
   const BooksScreen({super.key});
 
+  /// Free tier caps the library at [Pro.freeBookLimit] books; creating or
+  /// importing past the cap opens the Pro sheet instead.
+  bool _atBookCap(BuildContext context) {
+    final pro = context.read<Pro>();
+    final library = context.read<LibraryStore>();
+    if (!pro.isPro && library.books.length >= Pro.freeBookLimit) {
+      showProSheet(
+        context,
+        reason:
+            'The free version holds up to ${Pro.freeBookLimit} books. '
+            'Unlock Pro for an unlimited library.',
+      );
+      return true;
+    }
+    return false;
+  }
+
   Future<void> _createBook(BuildContext context) async {
+    if (_atBookCap(context)) return;
     final library = context.read<LibraryStore>();
     final title = await studioPrompt(
       context,
@@ -124,7 +144,10 @@ class BooksScreen extends StatelessWidget {
           child: StudioIconButton(
             icon: Icons.download_outlined,
             tooltip: 'Import shared library',
-            onTap: () => runPackageImportFlow(context),
+            onTap: () {
+              if (_atBookCap(context)) return;
+              runPackageImportFlow(context);
+            },
           ),
         ),
         KeyedSubtree(
