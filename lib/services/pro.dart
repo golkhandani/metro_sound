@@ -7,7 +7,7 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 
 /// Metro Sound Pro: one-time unlock (unlimited books, recorder, no reminders).
 ///
-/// Free tier is fully usable — 3 books, metronome and tuner unrestricted. A
+/// Free tier is fully usable — 1 book, metronome and tuner unrestricted. A
 /// polite upgrade reminder appears after the 5th session, at most once a day,
 /// and only when a tool session *ends* (never blocking the moment of use).
 ///
@@ -20,7 +20,13 @@ class Pro extends ChangeNotifier {
   static const String productId = 'metrosound_pro_unlock';
 
   /// Free tier allows this many books.
-  static const int freeBookLimit = 3;
+  static const int freeBookLimit = 1;
+
+  /// Grammatically-correct sentence for the free library cap, used as the Pro
+  /// gate reason. Handles the singular case so it never reads "up to 1 books".
+  static String get freeLibraryLimitText => freeBookLimit == 1
+      ? 'The free version holds a single book.'
+      : 'The free version holds up to $freeBookLimit books.';
 
   /// The reminder starts after this many sessions.
   static const int nagAfterSessions = 5;

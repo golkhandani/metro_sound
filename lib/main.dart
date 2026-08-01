@@ -15,6 +15,7 @@ import 'services/tuner.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/root_shell.dart';
 import 'ui/studio.dart';
+import 'widgets/keep_awake.dart';
 import 'widgets/package_job_overlay.dart';
 
 Future<void> main() async {
@@ -97,9 +98,23 @@ class _MetroSoundAppState extends State<MetroSoundApp>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
     // Returning to the app after a while counts as a new practice session
     // (Pro debounces to at most one per half hour).
-    if (state == AppLifecycleState.resumed) widget.pro.maybeCountSession();
+    widget.pro.maybeCountSession();
+    // While we were backgrounded another app may have taken over the audio
+    // session (e.g. the user played music elsewhere), leaving our shared
+    // playback session deactivated. just_audio recovers on its own, but the
+    // metronome's click engine (audioplayers) doesn't — the clicks keep firing
+    // silently. Only re-assert when the metronome is actually running, so we
+    // never stomp on a record session left by the tuner/recorder. A short delay
+    // lets the session finish settling after the interruption ends.
+    if (widget.metronome.running) {
+      Future.delayed(
+        const Duration(milliseconds: 200),
+        widget.metronome.restorePlaybackSession,
+      );
+    }
   }
 
   Brightness _resolve(String mode) => switch (mode) {
@@ -136,10 +151,13 @@ class _MetroSoundAppState extends State<MetroSoundApp>
               debugShowCheckedModeBanner: false,
               theme: studioTheme(),
               navigatorKey: appNavigatorKey,
-              // Float the package-job chip above every route.
-              builder: (context, child) => Stack(
-                textDirection: TextDirection.ltr,
-                children: [?child, const PackageJobOverlay()],
+              // Keep the screen awake during practice, and float the
+              // package-job chip above every route.
+              builder: (context, child) => KeepAwake(
+                child: Stack(
+                  textDirection: TextDirection.ltr,
+                  children: [?child, const PackageJobOverlay()],
+                ),
               ),
               home: const _Home(),
             ),

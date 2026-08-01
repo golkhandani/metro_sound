@@ -77,7 +77,7 @@ class SettingsScreen extends StatelessWidget {
       return showProSheet(
         context,
         reason:
-            'The free version holds up to ${Pro.freeBookLimit} books. '
+            '${Pro.freeLibraryLimitText} '
             'Unlock Pro for an unlimited library.',
       );
     }
