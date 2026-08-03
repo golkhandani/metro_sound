@@ -551,20 +551,22 @@ class _AboutState extends State<_About> {
   // Hidden entry point for the tester tools: tap the version 7× within a few
   // seconds, then enter the tester code. Does nothing outside a test build.
   int _taps = 0;
-  DateTime? _firstTap;
+  DateTime? _lastTap;
 
   void _onVersionTap() {
     final pro = context.read<Pro>();
     if (!pro.isTestBuild) return; // production/App Store: no hidden menu at all
     final now = DateTime.now();
-    if (_firstTap == null || now.difference(_firstTap!) > const Duration(seconds: 3)) {
-      _firstTap = now;
+    // Reset only when the pause *between* taps is long — steady tapping at any
+    // comfortable pace accumulates, rather than racing a fixed total window.
+    if (_lastTap != null && now.difference(_lastTap!) > const Duration(seconds: 1)) {
       _taps = 0;
     }
+    _lastTap = now;
     _taps++;
     if (_taps < 7) return;
     _taps = 0;
-    _firstTap = null;
+    _lastTap = null;
     if (pro.testerRevealed) {
       showToast(context, 'Tester tools already on — see “Testing” up top.');
     } else {
