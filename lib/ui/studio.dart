@@ -962,14 +962,20 @@ void showToast(BuildContext context, String message) {
       right: 0,
       child: IgnorePointer(
         child: Center(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
-            decoration: BoxDecoration(
-              color: Studio.surfaceHigh,
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: Studio.line),
+          // Overlay entries have no Material ancestor, so without this the
+          // toast text renders with Flutter's amber "missing Material" double
+          // underline. Material(transparency) supplies the proper text context.
+          child: Material(
+            type: MaterialType.transparency,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+              decoration: BoxDecoration(
+                color: Studio.surfaceHigh,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: Studio.line),
+              ),
+              child: Text(message, style: Studio.body),
             ),
-            child: Text(message, style: Studio.body),
           ),
         ),
       ),
