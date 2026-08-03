@@ -33,6 +33,23 @@ import AVFoundation
           }
         }
       }
+
+      // Build-environment channel. The App Store receipt is named
+      // "sandboxReceipt" for TestFlight (and Xcode) installs and "receipt" for
+      // production App Store installs, so this reliably distinguishes a tester
+      // build from a paying customer's copy of the same binary. Used to gate the
+      // TestFlight-only Pro bypass; it fails closed (false) when no receipt is
+      // present, so production never accidentally reports as a test build.
+      let envChannel = FlutterMethodChannel(
+        name: "metro_sound/build_env", binaryMessenger: controller.binaryMessenger)
+      envChannel.setMethodCallHandler { call, result in
+        guard call.method == "isSandbox" else {
+          result(FlutterMethodNotImplemented)
+          return
+        }
+        let name = Bundle.main.appStoreReceiptURL?.lastPathComponent
+        result(name == "sandboxReceipt")
+      }
     }
     return didFinish
   }

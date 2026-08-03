@@ -116,7 +116,8 @@
       "Read(//Users/mrzg/**)",
       "Bash(grep -rniE \"freeBookLimit|free.{0,15}book|up to .{0,3}book|3 book|three book\" lib)",
       "Bash(env)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(echo \"EXIT=$?\")"
     ]
   }
 }

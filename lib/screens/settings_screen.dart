@@ -134,6 +134,25 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // Tester-only affordance: flip Pro on/off without a sandbox purchase.
+          // Shown only in debug and TestFlight builds; a production App Store
+          // install reports isTestBuild == false, so this never appears there.
+          if (context.watch<Pro>().isTestBuild) ...[
+            const SectionLabel('Testing', icon: Icons.science_outlined),
+            const SizedBox(height: 12),
+            StudioCard(
+              child: _SettingToggle(
+                icon: Icons.workspace_premium_outlined,
+                title: 'Unlock Pro for testing',
+                subtitle: "You're on a test build, so paid features are free. "
+                    'Turn off to preview the free tier and the purchase flow. '
+                    'This switch is absent in the App Store version.',
+                value: context.watch<Pro>().testUnlock,
+                onChanged: (v) => context.read<Pro>().setTestUnlock(v),
+              ),
+            ),
+            const SizedBox(height: 28),
+          ],
           if (context.watch<Pro>().supported) ...[
             const SectionLabel(
               'Metro Sound Pro',

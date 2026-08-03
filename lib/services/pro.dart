@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 
@@ -53,7 +54,57 @@ class Pro extends ChangeNotifier {
       !kIsWeb && (Platform.isIOS || Platform.isMacOS || Platform.isAndroid);
 
   bool _isPro = false;
-  bool get isPro => _isPro;
+
+  // ---- TestFlight / debug Pro bypass --------------------------------------
+  //
+  // Lets testers exercise the paid features without a sandbox purchase. It is
+  // active only in a *test* build: debug runs, and TestFlight installs — whose
+  // App Store receipt is named "sandboxReceipt" (checked natively at init).
+  //
+  // A production App Store install has a "receipt" named receipt, so
+  // [_isTestBuild] is false there and the bypass can NEVER unlock Pro for a
+  // paying customer — even though TestFlight and the App Store ship the exact
+  // same binary. It also fails closed: if the receipt can't be read, the build
+  // is treated as production and the paywall stays real.
+  static const _envChannel = MethodChannel('metro_sound/build_env');
+
+  bool _isTestBuild = kDebugMode;
+
+  /// True in debug and TestFlight builds; false for production App Store copies.
+  bool get isTestBuild => _isTestBuild;
+
+  // Testers start unlocked (paid features visible immediately) and can toggle
+  // this off in Settings to preview the free tier and the real purchase flow.
+  // Consulted only inside a test build.
+  bool _testUnlock = true;
+
+  /// Whether the tester bypass is currently unlocking Pro.
+  bool get testUnlock => _isTestBuild && _testUnlock;
+
+  /// Flip the tester bypass. No-op in a production build.
+  void setTestUnlock(bool v) {
+    if (!_isTestBuild) return;
+    _testUnlock = v;
+    notifyListeners();
+  }
+
+  bool get isPro => _isPro || testUnlock;
+
+  /// Detect whether this is a test (debug/TestFlight) build so the bypass can
+  /// safely turn itself off in production. Fails closed to production.
+  Future<void> _detectTestBuild() async {
+    if (kDebugMode) {
+      _isTestBuild = true;
+      return;
+    }
+    if (kIsWeb || !Platform.isIOS) return; // only the iOS receipt check exists
+    try {
+      _isTestBuild = await _envChannel.invokeMethod<bool>('isSandbox') ?? false;
+    } catch (e) {
+      debugPrint('build env check failed: $e');
+      _isTestBuild = false; // fail closed → treat as production
+    }
+  }
 
   bool _storeAvailable = false;
   ProductDetails? _product;
@@ -74,6 +125,11 @@ class Pro extends ChangeNotifier {
   String? _lastNagDay;
 
   Future<void> init() async {
+    // Determine test-vs-production first so the tester bypass is settled before
+    // the UI reads isPro. Runs on every platform (unsupported ones just stay in
+    // their kDebugMode default).
+    await _detectTestBuild();
+    notifyListeners();
     if (!supported) return;
     // Keychain first: instant + offline. StoreKit confirms/updates it below.
     try {
