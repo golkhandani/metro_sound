@@ -134,19 +134,20 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Tester-only affordance: flip Pro on/off without a sandbox purchase.
-          // Shown only in debug and TestFlight builds; a production App Store
-          // install reports isTestBuild == false, so this never appears there.
-          if (context.watch<Pro>().isTestBuild) ...[
+          // Tester-only affordance, revealed by entering the tester code (tap
+          // the version 7× in About). Hidden until then, so an App Review
+          // reviewer — who runs in the same sandbox but lacks the code — never
+          // sees it; and it's impossible at all in a production build.
+          if (context.watch<Pro>().testerRevealed) ...[
             const SectionLabel('Testing', icon: Icons.science_outlined),
             const SizedBox(height: 12),
             StudioCard(
               child: _SettingToggle(
                 icon: Icons.workspace_premium_outlined,
                 title: 'Unlock Pro for testing',
-                subtitle: "You're on a test build, so paid features are free. "
-                    'Turn off to preview the free tier and the purchase flow. '
-                    'This switch is absent in the App Store version.',
+                subtitle: 'Turn on to exercise the paid features without buying, '
+                    'or off to preview the free tier and the real purchase. '
+                    'This section only exists in test builds.',
                 value: context.watch<Pro>().testUnlock,
                 onChanged: (v) => context.read<Pro>().setTestUnlock(v),
               ),
@@ -539,8 +540,49 @@ class _SettingToggle extends StatelessWidget {
   }
 }
 
-class _About extends StatelessWidget {
+class _About extends StatefulWidget {
   const _About();
+
+  @override
+  State<_About> createState() => _AboutState();
+}
+
+class _AboutState extends State<_About> {
+  // Hidden entry point for the tester tools: tap the version 7× within a few
+  // seconds, then enter the tester code. Does nothing outside a test build.
+  int _taps = 0;
+  DateTime? _firstTap;
+
+  void _onVersionTap() {
+    final pro = context.read<Pro>();
+    if (!pro.isTestBuild) return; // production/App Store: no hidden menu at all
+    final now = DateTime.now();
+    if (_firstTap == null || now.difference(_firstTap!) > const Duration(seconds: 3)) {
+      _firstTap = now;
+      _taps = 0;
+    }
+    _taps++;
+    if (_taps < 7) return;
+    _taps = 0;
+    _firstTap = null;
+    if (pro.testerRevealed) {
+      showToast(context, 'Tester tools already on — see “Testing” up top.');
+    } else {
+      _promptForCode(pro);
+    }
+  }
+
+  Future<void> _promptForCode(Pro pro) async {
+    final code = await studioPrompt(
+      context,
+      title: 'Tester code',
+      hint: 'Enter code',
+    );
+    if (code == null || !mounted) return;
+    final ok = pro.enableTesterTools(code);
+    if (!mounted) return;
+    showToast(context, ok ? 'Pro unlocked for testing.' : 'Incorrect code.');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -560,8 +602,14 @@ class _About extends StatelessWidget {
           const SizedBox(height: 10),
           Text('Metro Sound', style: Studio.title.copyWith(letterSpacing: 0.5)),
           const SizedBox(height: 2),
-          Text('Version $kAppVersion', style: Studio.bodyDim),
-          const SizedBox(height: 4),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: _onVersionTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+              child: Text('Version $kAppVersion', style: Studio.bodyDim),
+            ),
+          ),
           Text(
             'Practice player · metronome · photos',
             style: TextStyle(fontSize: 11, color: Studio.textDim),
