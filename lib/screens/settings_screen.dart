@@ -588,35 +588,37 @@ class _AboutState extends State<_About> {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: Studio.surfaceHigh,
+    // The whole block is the hidden tester-reveal target (7 taps), so testers
+    // don't have to hit the small version text exactly.
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: _onVersionTap,
+      child: Center(
+        child: Column(
+          children: [
+            ClipRRect(
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Studio.line),
+              child: Image.asset(
+                'assets/icon/icon_ios.png',
+                width: 56,
+                height: 56,
+                fit: BoxFit.cover,
+              ),
             ),
-            child: Icon(Icons.av_timer, color: Studio.amber, size: 30),
-          ),
-          const SizedBox(height: 10),
-          Text('Metro Sound', style: Studio.title.copyWith(letterSpacing: 0.5)),
-          const SizedBox(height: 2),
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: _onVersionTap,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-              child: Text('Version $kAppVersion', style: Studio.bodyDim),
+            const SizedBox(height: 10),
+            Text(
+              'Metro Sound',
+              style: Studio.title.copyWith(letterSpacing: 0.5),
             ),
-          ),
-          Text(
-            'Practice player · metronome · photos',
-            style: TextStyle(fontSize: 11, color: Studio.textDim),
-          ),
-        ],
+            const SizedBox(height: 2),
+            Text('Version $kAppVersion', style: Studio.bodyDim),
+            const SizedBox(height: 4),
+            Text(
+              'Practice player · metronome · photos',
+              style: TextStyle(fontSize: 11, color: Studio.textDim),
+            ),
+          ],
+        ),
       ),
     );
   }
