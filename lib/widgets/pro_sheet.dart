@@ -9,6 +9,9 @@ import '../ui/studio.dart';
 /// one-tap dismissable — no delays, no guilt copy.
 Future<void> showProSheet(BuildContext context, {String? reason}) {
   final pro = context.read<Pro>();
+  // Re-fetch the product each time the paywall opens so a price/availability
+  // that wasn't ready at launch fills in without needing an app restart.
+  pro.loadProduct();
   return showModalBottomSheet<void>(
     context: context,
     backgroundColor: Colors.transparent,

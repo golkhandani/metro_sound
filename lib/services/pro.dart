@@ -195,22 +195,30 @@ class Pro extends ChangeNotifier {
       onError: (Object e) => debugPrint('purchaseStream error: $e'),
     );
 
+    await loadProduct();
+
+    await maybeCountSession();
+  }
+
+  /// (Re)fetch the product from the store. Safe to call repeatedly — used at
+  /// launch and every time the paywall opens, so a product that wasn't yet
+  /// available at launch (e.g. App Store Connect propagation delay after a new
+  /// IAP / agreement, or a flaky network) self-heals without an app restart.
+  Future<void> loadProduct() async {
+    if (!supported) return;
     try {
       _storeAvailable = await _iap.isAvailable();
-      if (_storeAvailable) {
-        final resp = await _iap.queryProductDetails({productId});
-        if (resp.productDetails.isNotEmpty) {
-          _product = resp.productDetails.first;
-          notifyListeners();
-        } else {
-          debugPrint('Pro product not found: ${resp.notFoundIDs}');
-        }
+      if (!_storeAvailable) return;
+      final resp = await _iap.queryProductDetails({productId});
+      if (resp.productDetails.isNotEmpty) {
+        _product = resp.productDetails.first;
+        notifyListeners();
+      } else {
+        debugPrint('Pro product not found: ${resp.notFoundIDs}');
       }
     } catch (e) {
       debugPrint('Pro store query failed: $e');
     }
-
-    await maybeCountSession();
   }
 
   void _onPurchases(List<PurchaseDetails> purchases) {
@@ -256,6 +264,9 @@ class Pro extends ChangeNotifier {
   /// Kick off the App Store purchase. Result arrives via the purchase stream.
   Future<void> buy() async {
     if (!supported || _isPro || _purchasing) return;
+    // One more fetch in case the product wasn't available at launch (store
+    // propagation / network) — avoids a dead "unavailable" button after a wait.
+    if (_product == null) await loadProduct();
     if (_product == null) {
       _error = 'The App Store is unavailable right now — try again later.';
       notifyListeners();
