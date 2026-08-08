@@ -9,6 +9,7 @@ import '../services/package_service.dart';
 import '../services/pro.dart';
 import '../services/settings.dart';
 import '../ui/studio.dart';
+import 'advanced_screen.dart';
 import '../widgets/coach_marks.dart';
 import '../widgets/import_preview_sheet.dart';
 import '../widgets/package_progress_sheet.dart';
@@ -134,22 +135,39 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Tester-only affordance, revealed by entering the tester code (tap
-          // the version 7× in About). Hidden until then, so an App Review
-          // reviewer — who runs in the same sandbox but lacks the code — never
-          // sees it; and it's impossible at all in a production build.
-          if (context.watch<Pro>().testerRevealed) ...[
+          // Developer/testing shortcuts. Only shown on a test build (debug or
+          // TestFlight); hidden in the production App Store because isTestBuild
+          // is false there. They deep-link into the Advanced page.
+          if (context.watch<Pro>().isTestBuild) ...[
             const SectionLabel('Testing', icon: Icons.science_outlined),
             const SizedBox(height: 12),
             StudioCard(
-              child: _SettingToggle(
-                icon: Icons.workspace_premium_outlined,
-                title: 'Unlock Pro for testing',
-                subtitle: 'Turn on to exercise the paid features without buying, '
-                    'or off to preview the free tier and the real purchase. '
-                    'This section only exists in test builds.',
-                value: context.watch<Pro>().testUnlock,
-                onChanged: (v) => context.read<Pro>().setTestUnlock(v),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Developer tools — test builds only, hidden in the App Store.',
+                    style: Studio.bodyDim,
+                  ),
+                  const SizedBox(height: 12),
+                  StudioButton(
+                    label: 'Storage & data cleanup',
+                    icon: Icons.cleaning_services_outlined,
+                    kind: StudioButtonKind.ghost,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const AdvancedScreen()),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  StudioButton(
+                    label: 'Reset purchase',
+                    icon: Icons.lock_reset,
+                    kind: StudioButtonKind.ghost,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const AdvancedScreen()),
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 28),
@@ -540,85 +558,33 @@ class _SettingToggle extends StatelessWidget {
   }
 }
 
-class _About extends StatefulWidget {
+class _About extends StatelessWidget {
   const _About();
 
   @override
-  State<_About> createState() => _AboutState();
-}
-
-class _AboutState extends State<_About> {
-  // Hidden entry point for the tester tools: tap the version 7× within a few
-  // seconds, then enter the tester code. Does nothing outside a test build.
-  int _taps = 0;
-  DateTime? _lastTap;
-
-  void _onVersionTap() {
-    final pro = context.read<Pro>();
-    if (!pro.isTestBuild) return; // production/App Store: no hidden menu at all
-    final now = DateTime.now();
-    // Reset only when the pause *between* taps is long — steady tapping at any
-    // comfortable pace accumulates, rather than racing a fixed total window.
-    if (_lastTap != null && now.difference(_lastTap!) > const Duration(seconds: 1)) {
-      _taps = 0;
-    }
-    _lastTap = now;
-    _taps++;
-    if (_taps < 7) return;
-    _taps = 0;
-    _lastTap = null;
-    if (pro.testerRevealed) {
-      showToast(context, 'Tester tools already on — see “Testing” up top.');
-    } else {
-      _promptForCode(pro);
-    }
-  }
-
-  Future<void> _promptForCode(Pro pro) async {
-    final code = await studioPrompt(
-      context,
-      title: 'Tester code',
-      hint: 'Enter code',
-    );
-    if (code == null || !mounted) return;
-    final ok = pro.enableTesterTools(code);
-    if (!mounted) return;
-    showToast(context, ok ? 'Pro unlocked for testing.' : 'Incorrect code.');
-  }
-
-  @override
   Widget build(BuildContext context) {
-    // The whole block is the hidden tester-reveal target (7 taps), so testers
-    // don't have to hit the small version text exactly.
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: _onVersionTap,
-      child: Center(
-        child: Column(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: Image.asset(
-                'assets/icon/icon_ios.png',
-                width: 56,
-                height: 56,
-                fit: BoxFit.cover,
-              ),
+    return Center(
+      child: Column(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: Image.asset(
+              'assets/icon/icon_ios.png',
+              width: 56,
+              height: 56,
+              fit: BoxFit.cover,
             ),
-            const SizedBox(height: 10),
-            Text(
-              'Metro Sound',
-              style: Studio.title.copyWith(letterSpacing: 0.5),
-            ),
-            const SizedBox(height: 2),
-            Text('Version $kAppVersion', style: Studio.bodyDim),
-            const SizedBox(height: 4),
-            Text(
-              'Practice player · metronome · photos',
-              style: TextStyle(fontSize: 11, color: Studio.textDim),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 10),
+          Text('Metro Sound', style: Studio.title.copyWith(letterSpacing: 0.5)),
+          const SizedBox(height: 2),
+          Text('Version $kAppVersion', style: Studio.bodyDim),
+          const SizedBox(height: 4),
+          Text(
+            'Practice player · metronome · photos',
+            style: TextStyle(fontSize: 11, color: Studio.textDim),
+          ),
+        ],
       ),
     );
   }

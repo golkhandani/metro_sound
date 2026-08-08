@@ -54,84 +54,28 @@ class Pro extends ChangeNotifier {
       !kIsWeb && (Platform.isIOS || Platform.isMacOS || Platform.isAndroid);
 
   bool _isPro = false;
+  bool get isPro => _isPro;
 
-  // ---- TestFlight / debug Pro bypass --------------------------------------
-  //
-  // Lets testers exercise the paid features without a sandbox purchase. It is
-  // active only in a *test* build: debug runs, and TestFlight installs — whose
-  // App Store receipt is named "sandboxReceipt" (checked natively at init).
-  //
-  // A production App Store install has a "receipt" named receipt, so
-  // [_isTestBuild] is false there and the bypass can NEVER unlock Pro for a
-  // paying customer — even though TestFlight and the App Store ship the exact
-  // same binary. It also fails closed: if the receipt can't be read, the build
-  // is treated as production and the paywall stays real.
+  // Whether this is a test build (debug or TestFlight) rather than a production
+  // App Store install. Used ONLY to gate the developer/testing tools in Settings
+  // (reset cache / data / purchase) — it never affects entitlement. Both
+  // TestFlight and App Review run in the sandbox (receipt "sandboxReceipt"),
+  // while a production install has a "receipt" receipt; checked natively at init
+  // and fails closed to false.
   static const _envChannel = MethodChannel('metro_sound/build_env');
-  static const _kTestUnlock = 'test_unlock';
-  static const _kTesterRevealed = 'tester_revealed';
-
-  /// Code a tester enters (Settings → tap the version 7×) to reveal the
-  /// Pro-testing controls. Hardcoding is safe: the bypass is physically
-  /// impossible in a production build regardless of this value (see
-  /// [_isTestBuild]), so the code exists only to keep an App Review reviewer —
-  /// who also runs in the sandbox but doesn't have the code — from turning it
-  /// on. Share it with your testers; change it here whenever you like.
-  static const testerCode = 'metropro';
-
   bool _isTestBuild = kDebugMode;
-
-  /// True in debug and TestFlight builds; false for production App Store copies.
-  /// Both TestFlight and App Review run in the sandbox, so this alone can't tell
-  /// a tester from a reviewer — that's what the code + reveal gesture are for.
   bool get isTestBuild => _isTestBuild;
 
-  // Whether the hidden tester controls have been revealed (correct code
-  // entered). Persisted so a tester does it once. Auto-on in debug.
-  bool _testerRevealed = kDebugMode;
-
-  /// Whether the Settings "Testing" section should be shown.
-  bool get testerRevealed => _isTestBuild && _testerRevealed;
-
-  // Whether the tester bypass is currently unlocking Pro. Off by default so a
-  // reviewer (and a fresh tester) sees the real paywall until the code is used.
-  bool _testUnlock = false;
-
-  /// Whether the tester bypass is currently unlocking Pro.
-  bool get testUnlock => _isTestBuild && _testUnlock;
-
-  /// Flip the tester bypass. No-op in a production build.
-  void setTestUnlock(bool v) {
+  /// Test-only: clear the local Pro entitlement (Keychain + memory) without
+  /// affecting the Apple ID's ownership, so the Restore flow can be exercised on
+  /// a single device. No-op outside a test build.
+  Future<void> resetPurchaseLocal() async {
     if (!_isTestBuild) return;
-    _testUnlock = v;
-    _persistFlag(_kTestUnlock, v);
-    notifyListeners();
+    await _setPro(false);
   }
 
-  /// Reveal the tester controls and unlock Pro if [code] matches. No-op unless
-  /// this is a test build. Returns whether the code was accepted.
-  bool enableTesterTools(String code) {
-    if (!_isTestBuild) return false;
-    if (code.trim().toLowerCase() != testerCode) return false;
-    _testerRevealed = true;
-    _testUnlock = true;
-    _persistFlag(_kTesterRevealed, true);
-    _persistFlag(_kTestUnlock, true);
-    notifyListeners();
-    return true;
-  }
-
-  bool get isPro => _isPro || testUnlock;
-
-  Future<void> _persistFlag(String key, bool value) async {
-    try {
-      await _storage.write(key: key, value: value ? 'true' : 'false');
-    } catch (e) {
-      debugPrint('Pro persist $key failed: $e');
-    }
-  }
-
-  /// Detect whether this is a test (debug/TestFlight) build so the bypass can
-  /// safely turn itself off in production. Fails closed to production.
+  /// Detect whether this is a test (debug/TestFlight) build so the testing tools
+  /// stay hidden in production. Fails closed to production.
   Future<void> _detectTestBuild() async {
     if (kDebugMode) {
       _isTestBuild = true;
@@ -178,11 +122,6 @@ class Pro extends ChangeNotifier {
       final last = await _storage.read(key: _kLastSession);
       if (last != null) _lastSessionAt = DateTime.tryParse(last);
       _lastNagDay = await _storage.read(key: _kLastNag);
-      // Restore the tester bypass so a tester only enters the code once. Read
-      // unconditionally; the getters ignore them unless this is a test build.
-      _testUnlock = await _storage.read(key: _kTestUnlock) == 'true';
-      _testerRevealed =
-          kDebugMode || await _storage.read(key: _kTesterRevealed) == 'true';
     } catch (e) {
       debugPrint('Pro keychain read failed: $e');
     }
