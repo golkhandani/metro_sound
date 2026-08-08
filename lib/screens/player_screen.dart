@@ -144,7 +144,7 @@ class _DoneCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  done ? 'Lesson completed' : 'Mark lesson as completed',
+                  done ? 'Track completed' : 'Mark track as completed',
                   style: Studio.title,
                 ),
                 const SizedBox(height: 2),
@@ -274,22 +274,18 @@ class _SpeedCard extends StatelessWidget {
 
     return StudioCard(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          Icon(Icons.speed, color: Studio.amber, size: 18),
-          const SizedBox(width: 8),
-          Text('SPEED', style: Studio.label),
-          const Spacer(),
-          StudioSegmented<double>(
-            selected: audio.speed,
-            options: [for (final s in speeds) (s, _fmt(s))],
-            onChanged: (s) {
-              audio.setSpeed(s);
-              metronome.setSpeed(s);
-              onChanged();
-            },
-          ),
-        ],
+      child: SectionLabel(
+        'Speed',
+        icon: Icons.speed,
+        trailing: StudioSegmented<double>(
+          selected: audio.speed,
+          options: [for (final s in speeds) (s, _fmt(s))],
+          onChanged: (s) {
+            audio.setSpeed(s);
+            metronome.setSpeed(s);
+            onChanged();
+          },
+        ),
       ),
     );
   }

@@ -119,7 +119,10 @@
       "Bash(git commit *)",
       "Bash(echo \"EXIT=$?\")",
       "Bash(flutter run *)",
-      "Bash(echo \"RUN_EXIT=$?\")"
+      "Bash(echo \"RUN_EXIT=$?\")",
+      "Bash(grep -nA1 -E \"NSMicrophoneUsageDescription|NSCameraUsageDescription|NSPhotoLibrary\" ios/Runner/Info.plist)",
+      "Bash(xcrun simctl *)",
+      "Bash(open -a Simulator)"
     ]
   }
 }

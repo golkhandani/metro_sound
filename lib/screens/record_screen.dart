@@ -439,7 +439,7 @@ class _RecordScreenState extends State<RecordScreen> {
                     },
                   ),
                   const SizedBox(height: 14),
-                  Text('QUALITY', style: Studio.label),
+                  const SectionLabel('Quality'),
                   const SizedBox(height: 8),
                   Opacity(
                     opacity: _rec.state == RecState.idle ? 1 : 0.4,

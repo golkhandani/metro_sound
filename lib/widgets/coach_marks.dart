@@ -73,7 +73,7 @@ class CoachScripts {
       CoachTarget(
         CoachKeys.metroTap,
         'Tap tempo',
-        'Tap along with a song to find its tempo.',
+        'Tap along with a track to find its tempo.',
       ),
       CoachTarget(
         CoachKeys.metroTimeSig,

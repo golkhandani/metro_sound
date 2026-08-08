@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../services/metronome.dart';
 import '../services/pro.dart';
+import '../services/settings.dart';
 import '../services/tuner.dart';
 import '../ui/studio.dart';
 import '../dev/screenshot_director.dart';
@@ -58,6 +59,35 @@ class _RootShellState extends State<RootShell> {
     });
   }
 
+  // Show a one-time mic explainer (priming) before the tuner triggers the OS
+  // permission prompt, then start listening. Boosts the grant rate and makes
+  // the request feel in-context. Only starts if the user taps Continue.
+  Future<void> _startTunerWithPriming() async {
+    const tip = 'tuner_mic_priming';
+    final settings = context.read<AppSettings>();
+    if (!settings.tipSeen(tip)) {
+      await settings.markTipSeen(tip);
+      if (!mounted) return;
+      final go = await studioConfirm(
+        context,
+        title: 'Microphone for the tuner',
+        message: 'Metro Sound uses your microphone to detect the pitch you '
+            'play. Audio is analyzed on your device and is never recorded or '
+            'sent anywhere.',
+        confirmLabel: 'Continue',
+      );
+      if (!go || !mounted) return;
+    }
+    _queueAudioOp(() => context.read<Tuner>().start());
+    // Priming resolved — coach the tuner now, so the tutorial never overlaps
+    // the mic dialog.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _index == _tunerTab) {
+        CoachMarks.maybeShow(context, _screenIds[_tunerTab]);
+      }
+    });
+  }
+
   void _select(int i) {
     if (i == _index) {
       return;
@@ -75,7 +105,7 @@ class _RootShellState extends State<RootShell> {
     // session restore, and (re)start race each other otherwise and the
     // capture engine dies with "listen failed" on quick tab hops.
     if (i == _tunerTab) {
-      _queueAudioOp(() => tuner.start());
+      _startTunerWithPriming();
     } else if (leavingTuner) {
       _queueAudioOp(() async {
         await tuner.stop();
@@ -88,12 +118,16 @@ class _RootShellState extends State<RootShell> {
       });
     }
     // Coach the newly visible tab (re-check the index post-frame so rapid
-    // tab-hopping never spotlights a hidden screen).
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _index == i) {
-        CoachMarks.maybeShow(context, _screenIds[i]);
-      }
-    });
+    // tab-hopping never spotlights a hidden screen). The tuner is excluded here
+    // and coached inside _startTunerWithPriming instead, so its coach marks
+    // never overlap the mic priming dialog.
+    if (i != _tunerTab) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _index == i) {
+          CoachMarks.maybeShow(context, _screenIds[i]);
+        }
+      });
+    }
     // The polite Pro reminder: only as a metronome/tuner session ENDS (never
     // blocking the moment of use), only after enough sessions, once a day.
     if (leavingMetronome || leavingTuner) {

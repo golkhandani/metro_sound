@@ -250,24 +250,19 @@ class SettingsScreen extends StatelessWidget {
           StudioCard(
             key: CoachKeys.settingsShareCard,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    StudioButton(
-                      label: 'Share my library',
-                      icon: Icons.ios_share,
-                      onTap: () => _shareLibrary(context),
-                    ),
-                    StudioButton(
-                      label: 'Import shared library',
-                      icon: Icons.download_outlined,
-                      kind: StudioButtonKind.ghost,
-                      onTap: () => _importShared(context),
-                    ),
-                  ],
+                StudioButton(
+                  label: 'Share my library',
+                  icon: Icons.ios_share,
+                  onTap: () => _shareLibrary(context),
+                ),
+                const SizedBox(height: 10),
+                StudioButton(
+                  label: 'Import shared library',
+                  icon: Icons.download_outlined,
+                  kind: StudioButtonKind.ghost,
+                  onTap: () => _importShared(context),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -417,28 +412,23 @@ class SettingsScreen extends StatelessWidget {
               const SizedBox(height: 14),
               StudioCard(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: [
-                        StudioButton(
-                          label: 'Back up to Drive',
-                          icon: Icons.cloud_upload_outlined,
-                          onTap: (drive.isConnected && !drive.busy)
-                              ? () => _backup(context)
-                              : null,
-                        ),
-                        StudioButton(
-                          label: 'Load catalog',
-                          icon: Icons.cloud_download_outlined,
-                          kind: StudioButtonKind.ghost,
-                          onTap: (drive.isConnected && !drive.busy)
-                              ? () => _load(context)
-                              : null,
-                        ),
-                      ],
+                    StudioButton(
+                      label: 'Back up to Drive',
+                      icon: Icons.cloud_upload_outlined,
+                      onTap: (drive.isConnected && !drive.busy)
+                          ? () => _backup(context)
+                          : null,
+                    ),
+                    const SizedBox(height: 10),
+                    StudioButton(
+                      label: 'Load catalog',
+                      icon: Icons.cloud_download_outlined,
+                      kind: StudioButtonKind.ghost,
+                      onTap: (drive.isConnected && !drive.busy)
+                          ? () => _load(context)
+                          : null,
                     ),
                     const SizedBox(height: 12),
                     Text(
@@ -615,7 +605,7 @@ class _ProCard extends StatelessWidget {
     }
     return StudioCard(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
             'Unlimited books, the practice recorder, and no reminders — '
@@ -623,21 +613,16 @@ class _ProCard extends StatelessWidget {
             style: Studio.bodyDim,
           ),
           const SizedBox(height: 12),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              StudioButton(
-                label: 'Unlock Pro — ${pro.price}',
-                icon: Icons.lock_open_outlined,
-                onTap: () => showProSheet(context),
-              ),
-              StudioButton(
-                label: 'Restore purchase',
-                kind: StudioButtonKind.ghost,
-                onTap: pro.restore,
-              ),
-            ],
+          StudioButton(
+            label: 'Unlock Pro — ${pro.price}',
+            icon: Icons.lock_open_outlined,
+            onTap: () => showProSheet(context),
+          ),
+          const SizedBox(height: 10),
+          StudioButton(
+            label: 'Restore purchase',
+            kind: StudioButtonKind.ghost,
+            onTap: pro.restore,
           ),
         ],
       ),

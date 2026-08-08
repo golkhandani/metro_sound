@@ -71,6 +71,10 @@ class Tuner extends ChangeNotifier {
   String? _error;
   String? get error => _error;
 
+  // Shared with the recorder: asks iOS for mic access. On the first call this
+  // shows the system prompt; afterwards it returns the current status.
+  static const _micChannel = MethodChannel('metro_sound/mic');
+
   Future<void> start() async {
     if (_listening) return;
     if (!supported) {
@@ -79,6 +83,21 @@ class Tuner extends ChangeNotifier {
           'iPhone or iPad to tune.';
       notifyListeners();
       return;
+    }
+    // Request mic access in context (first tuner use). Explicit request mirrors
+    // the recorder and lets us show a clear "denied" state instead of a silent
+    // dead engine. The channel is iOS-only; elsewhere the call throws and we
+    // fall through to let the capture engine handle permissions itself.
+    try {
+      final granted = await _micChannel.invokeMethod<bool>('requestPermission');
+      if (granted == false) {
+        _error = 'Microphone access is off. Turn it on in Settings › '
+            'Metro Sound › Microphone to use the tuner.';
+        notifyListeners();
+        return;
+      }
+    } catch (e) {
+      debugPrint('Tuner mic permission request skipped: $e');
     }
     // A fresh plugin instance per attempt: init() runs once per instance and
     // is what re-establishes the record session (leaving the tab restores the
