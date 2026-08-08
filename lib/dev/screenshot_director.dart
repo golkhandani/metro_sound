@@ -13,13 +13,14 @@ import '../services/sample_library.dart';
 import '../services/metronome.dart';
 import '../services/settings.dart';
 import '../widgets/package_job_overlay.dart';
+import '../widgets/pro_sheet.dart';
 
 /// Dev-only App Store screenshot rig. Entirely inert unless built with
 /// `--dart-define=SHOT=<screen>`; seeds demo content and auto-navigates so a
 /// simulator screenshot can be captured. Never active in store builds.
 ///
 /// SHOT values: onboarding | library | book | player | metronome | tuner |
-/// settings. Add THEME=light for the light skin.
+/// settings | pro. Add THEME=light for the light skin.
 class ScreenshotDirector {
   static const shot = String.fromEnvironment('SHOT');
   static const theme = String.fromEnvironment('THEME');
@@ -29,7 +30,7 @@ class ScreenshotDirector {
   static int? get initialTab => switch (shot) {
         'metronome' => 1,
         'tuner' => 2,
-        'settings' => 3,
+        'settings' || 'pro' => 3,
         _ => null,
       };
 
@@ -77,6 +78,13 @@ class ScreenshotDirector {
               MaterialPageRoute(builder: (_) => const PlayerScreen()));
           await Future.delayed(const Duration(milliseconds: 600));
           audio.play();
+        });
+      case 'pro':
+        // Open the paywall sheet over Settings so the purchase screen can be
+        // captured for the IAP review screenshot.
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          await Future.delayed(const Duration(milliseconds: 400));
+          showProSheet(appNavigatorKey.currentContext!);
         });
     }
   }

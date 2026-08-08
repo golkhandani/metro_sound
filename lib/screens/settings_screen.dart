@@ -9,6 +9,7 @@ import '../services/package_service.dart';
 import '../services/pro.dart';
 import '../services/settings.dart';
 import '../ui/studio.dart';
+import '../dev/screenshot_director.dart';
 import 'advanced_screen.dart';
 import '../widgets/coach_marks.dart';
 import '../widgets/import_preview_sheet.dart';
@@ -138,7 +139,7 @@ class SettingsScreen extends StatelessWidget {
           // Developer/testing shortcuts. Only shown on a test build (debug or
           // TestFlight); hidden in the production App Store because isTestBuild
           // is false there. They deep-link into the Advanced page.
-          if (context.watch<Pro>().isTestBuild) ...[
+          if (context.watch<Pro>().isTestBuild && !ScreenshotDirector.active) ...[
             const SectionLabel('Testing', icon: Icons.science_outlined),
             const SizedBox(height: 12),
             StudioCard(
