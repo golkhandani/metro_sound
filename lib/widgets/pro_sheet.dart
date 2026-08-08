@@ -64,14 +64,14 @@ class _ProSheet extends StatelessWidget {
               const SizedBox(height: 10),
               Text(
                 reason ??
-                    'Enjoying the practice sessions? One small purchase '
-                        'unlocks everything — forever.',
+                    'Your first book is free. Unlock Pro to add unlimited '
+                        'books — one purchase, yours forever.',
                 style: Studio.body,
               ),
               const SizedBox(height: 14),
               const _Benefit(
                 icon: Icons.library_music_outlined,
-                text: 'Unlimited books in your library',
+                text: 'Unlimited books (your first one is free)',
               ),
               const _Benefit(
                 icon: Icons.mic_none,

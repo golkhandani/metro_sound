@@ -26,7 +26,7 @@ class Pro extends ChangeNotifier {
   /// Grammatically-correct sentence for the free library cap, used as the Pro
   /// gate reason. Handles the singular case so it never reads "up to 1 books".
   static String get freeLibraryLimitText => freeBookLimit == 1
-      ? 'The free version holds a single book.'
+      ? 'Your first book is free.'
       : 'The free version holds up to $freeBookLimit books.';
 
   /// The reminder starts after this many sessions.

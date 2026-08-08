@@ -58,10 +58,12 @@ class SampleLibrary {
       try {
         await dir.delete(recursive: true);
       } catch (_) {}
+      // Mark seeded only after a successful seed, so a transient failure retries
+      // on the next launch instead of leaving a permanently-empty library.
+      await settings.setSampleSeeded(true);
     } catch (_) {
-      // Seeding is best-effort; an empty library is not an error.
+      // Seeding is best-effort; leave sampleSeeded false so it retries.
     }
-    await settings.setSampleSeeded(true);
   }
 }
 

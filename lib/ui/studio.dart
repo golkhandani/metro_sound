@@ -994,31 +994,42 @@ class _DialogShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       type: MaterialType.transparency,
-      child: Center(
-        child: Container(
-          width: 380,
-          margin: const EdgeInsets.all(24),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Studio.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Studio.line),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Studio.textPrimary,
-                ),
+      // Lift the dialog above the on-screen keyboard so its action buttons stay
+      // visible; scroll if the remaining space is tight.
+      child: AnimatedPadding(
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOut,
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Center(
+          child: SingleChildScrollView(
+            child: Container(
+              width: 380,
+              margin: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Studio.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Studio.line),
               ),
-              const SizedBox(height: 16),
-              child,
-            ],
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Studio.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  child,
+                ],
+              ),
+            ),
           ),
         ),
       ),
