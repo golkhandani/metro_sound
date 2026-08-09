@@ -52,7 +52,7 @@ class _MetronomeScreenState extends State<MetronomeScreen> {
       title: 'Time signature',
       actions: [
         for (final (n, d) in _timeSigs)
-          StudioMenuAction('$n / $d', onTap: () => m.setTimeSignature(n, d)),
+          StudioMenuAction('$n/$d', onTap: () => m.setTimeSignature(n, d)),
       ],
     );
   }

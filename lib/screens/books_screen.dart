@@ -255,9 +255,20 @@ class _BookTile extends StatelessWidget {
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(color: Studio.line),
                           ),
-                          child: Text(
-                            '$done/$total',
-                            style: Studio.numeric(11, color: Studio.amber),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (done == total) ...[
+                                Icon(Icons.check_circle,
+                                    size: 12, color: Studio.amber),
+                                const SizedBox(width: 4),
+                              ],
+                              Text(
+                                '$done/$total',
+                                style:
+                                    Studio.numeric(11, color: Studio.amber),
+                              ),
+                            ],
                           ),
                         ),
                       ),

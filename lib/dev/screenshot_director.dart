@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
@@ -26,6 +27,12 @@ class ScreenshotDirector {
   static const theme = String.fromEnvironment('THEME');
   static bool get active => shot.isNotEmpty;
 
+  /// QA seed mode: `--dart-define=QASEED=1`. Seeds realistic demo content
+  /// (books, tracks, photos) for the automated QA sweep WITHOUT auto-navigating
+  /// and WITHOUT hiding the dev Testing tools (unlike SHOT). Inert otherwise.
+  static const _qa = String.fromEnvironment('QASEED');
+  static bool get qaSeed => _qa == '1';
+
   /// Initial tab for tab-based shots.
   static int? get initialTab => switch (shot) {
         'metronome' => 1,
@@ -36,10 +43,13 @@ class ScreenshotDirector {
 
   static Future<void> prepare(
       LibraryStore library, AppSettings settings) async {
-    if (!active) return;
+    if (!active && !qaSeed) return;
     await settings.setSampleSeeded(true); // rig content replaces the starter
-    // Deterministic skin per shot (dark is the brand default).
-    await settings.setThemeMode(theme == 'light' ? 'light' : 'dark');
+    // Deterministic skin per shot (dark is the brand default). QA leaves the
+    // default so the sweep can exercise the theme switcher itself.
+    if (active) {
+      await settings.setThemeMode(theme == 'light' ? 'light' : 'dark');
+    }
     if (shot == 'onboarding') {
       await settings.setOnboardingDone(false);
       return;
@@ -52,6 +62,25 @@ class ScreenshotDirector {
     }
     if (library.books.isNotEmpty) return; // already seeded
     await _seed(library);
+    if (qaSeed) await _seedPhotos(library);
+  }
+
+  /// Attaches a couple of demo photos to the first track so the Player photos
+  /// card and the Photo Viewer have real content to exercise. QA-only.
+  static Future<void> _seedPhotos(LibraryStore library) async {
+    if (library.books.isEmpty) return;
+    final tracks = library.tracksForBook(library.books.first.id);
+    if (tracks.isEmpty) return;
+    try {
+      final data = await rootBundle.load('assets/icon/icon_ios.png');
+      final tmp = await getTemporaryDirectory();
+      final f = File(p.join(tmp.path, 'qa_seed_photo.png'));
+      await f.writeAsBytes(data.buffer.asUint8List());
+      await library.addPhoto(tracks.first, f.path);
+      await library.addPhoto(tracks.first, f.path);
+    } catch (_) {
+      // Non-fatal: photo tests will just see the empty state.
+    }
   }
 
   /// Post-launch navigation for pushed-route shots + scene dressing.

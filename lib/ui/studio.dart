@@ -744,12 +744,14 @@ class PressableState extends State<Pressable> {
 
 class StudioMenuAction {
   final String label;
+  final String? subtitle;
   final IconData? icon;
   final bool destructive;
   final VoidCallback onTap;
   const StudioMenuAction(
     this.label, {
     required this.onTap,
+    this.subtitle,
     this.icon,
     this.destructive = false,
   });
@@ -818,13 +820,26 @@ Future<void> showStudioMenu(
                                 ),
                                 const SizedBox(width: 12),
                               ],
-                              Text(
-                                a.label,
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  color: a.destructive
-                                      ? Studio.red
-                                      : Studio.textPrimary,
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      a.label,
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        color: a.destructive
+                                            ? Studio.red
+                                            : Studio.textPrimary,
+                                      ),
+                                    ),
+                                    if (a.subtitle != null) ...[
+                                      const SizedBox(height: 2),
+                                      Text(a.subtitle!, style: Studio.bodyDim),
+                                    ],
+                                  ],
                                 ),
                               ),
                             ],

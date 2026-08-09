@@ -49,3 +49,4 @@ env.json
 client_secret_*.json
 *.credentials.json
 google_creds.json
+qa_artifacts/

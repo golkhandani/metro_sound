@@ -125,6 +125,12 @@ class Pro extends ChangeNotifier {
     } catch (e) {
       debugPrint('Pro keychain read failed: $e');
     }
+    // QA harness only: force Pro so the Pro-gated Record screen can be swept.
+    // Requires an explicit --dart-define=QAPRO=1 AND a test build; never ships
+    // (the App Store build sets no such define and isTestBuild is false there).
+    if (_isTestBuild && const bool.fromEnvironment('QAPRO')) {
+      _isPro = true;
+    }
     notifyListeners();
 
     // The purchase stream delivers new buys, restores, and (on iOS) existing

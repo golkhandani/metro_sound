@@ -242,6 +242,7 @@ class _TrackRowState extends State<_TrackRow> {
         ),
         StudioMenuAction(
           'Share track',
+          subtitle: 'Audio, tempo & photos — opens in Metro Sound',
           icon: Icons.ios_share,
           onTap: () async {
             // Package: audio + settings + photos, importable by Metro Sound users.
@@ -259,6 +260,7 @@ class _TrackRowState extends State<_TrackRow> {
         ),
         StudioMenuAction(
           'Share audio file',
+          subtitle: 'Just the audio — for any app',
           icon: Icons.audiotrack_outlined,
           onTap: () async {
             // Raw audio for any app — instant, no packaging job.
@@ -391,11 +393,13 @@ class _TrackRowState extends State<_TrackRow> {
                           '  ·  ${t.beatsPerBar}/${t.timeSigDenominator}',
                           style: Studio.bodyDim,
                         ),
-                        if (t.photoPaths.isNotEmpty)
-                          Text(
-                            '  ·  ${t.photoPaths.length} 📷',
-                            style: Studio.bodyDim,
-                          ),
+                        if (t.photoPaths.isNotEmpty) ...[
+                          Text('  ·  ${t.photoPaths.length}',
+                              style: Studio.bodyDim),
+                          const SizedBox(width: 3),
+                          Icon(Icons.photo_outlined,
+                              size: 13, color: Studio.bodyDim.color),
+                        ],
                       ],
                     ),
                   ],

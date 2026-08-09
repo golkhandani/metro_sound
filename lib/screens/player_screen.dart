@@ -321,7 +321,7 @@ class _MetronomeCard extends StatelessWidget {
       actions: [
         for (final (n, d) in _timeSigs)
           StudioMenuAction(
-            '$n / $d',
+            '$n/$d',
             onTap: () {
               m.setTimeSignature(n, d);
               onChanged();

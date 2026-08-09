@@ -239,7 +239,7 @@ class _MicState extends StatelessWidget {
         ),
       );
     }
-    return Row(
+    final row = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(
@@ -248,9 +248,15 @@ class _MicState extends StatelessWidget {
           color: tuner.listening ? Studio.amber : Studio.textDim,
         ),
         const SizedBox(width: 6),
-        Text(tuner.listening ? 'Listening…' : 'Mic off', style: Studio.bodyDim),
+        Text(
+          tuner.listening ? 'Listening…' : 'Mic off · tap to start',
+          style: Studio.bodyDim,
+        ),
       ],
     );
+    // When the mic isn't running, let the user retry without leaving the tab.
+    if (tuner.listening) return row;
+    return Pressable(onTap: tuner.start, child: row);
   }
 }
 
