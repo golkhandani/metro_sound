@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'config/features.dart';
 import 'services/audio_controller.dart';
 import 'services/drive_sync.dart';
+import 'services/icloud_sync.dart';
 import 'services/library_store.dart';
 import 'services/metronome.dart';
 import 'services/package_service.dart';
@@ -24,6 +25,7 @@ Future<void> main() async {
   final library = LibraryStore();
   final metronome = Metronome();
   final drive = DriveSyncService();
+  final icloud = ICloudSyncService();
   final settings = AppSettings();
   final packages = PackageService();
   final pro = Pro();
@@ -31,6 +33,7 @@ Future<void> main() async {
     library.init(),
     metronome.init(),
     if (driveSyncEnabled) drive.init(),
+    if (icloudSyncEnabled) icloud.init(),
     settings.init(),
     packages.init(),
     pro.init(),
@@ -38,6 +41,8 @@ Future<void> main() async {
   // Wire the library into Drive sync so two-way auto-sync can observe edits.
   // (Skipped while the feature is hidden — no Google sign-in work at launch.)
   if (driveSyncEnabled) await drive.attachLibrary(library);
+  // iCloud sync observes the same library edits (iOS/macOS, behind a flag).
+  if (icloudSyncEnabled) await icloud.attachLibrary(library);
   packages.attachLibrary(library);
   // Dev-only App Store screenshot rig (inert without --dart-define=SHOT).
   await ScreenshotDirector.prepare(library, settings);
@@ -49,6 +54,7 @@ Future<void> main() async {
       library: library,
       metronome: metronome,
       drive: drive,
+      icloud: icloud,
       settings: settings,
       packages: packages,
       pro: pro,
@@ -60,6 +66,7 @@ class MetroSoundApp extends StatefulWidget {
   final LibraryStore library;
   final Metronome metronome;
   final DriveSyncService drive;
+  final ICloudSyncService icloud;
   final AppSettings settings;
   final PackageService packages;
   final Pro pro;
@@ -68,6 +75,7 @@ class MetroSoundApp extends StatefulWidget {
     required this.library,
     required this.metronome,
     required this.drive,
+    required this.icloud,
     required this.settings,
     required this.packages,
     required this.pro,
@@ -130,6 +138,7 @@ class _MetroSoundAppState extends State<MetroSoundApp>
         ChangeNotifierProvider.value(value: widget.library),
         ChangeNotifierProvider.value(value: widget.metronome),
         ChangeNotifierProvider.value(value: widget.drive),
+        ChangeNotifierProvider.value(value: widget.icloud),
         ChangeNotifierProvider.value(value: widget.settings),
         ChangeNotifierProvider.value(value: widget.packages),
         ChangeNotifierProvider.value(value: widget.pro),

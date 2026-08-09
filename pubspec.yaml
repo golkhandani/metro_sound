@@ -57,6 +57,7 @@ dependencies:
   share_plus: ^10.1.4
   flutter_local_notifications: ^18.0.1
   wakelock_plus: ^1.5.2
+  icloud_storage: ^2.2.0
 
 dev_dependencies:
   flutter_test:

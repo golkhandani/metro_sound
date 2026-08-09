@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../config/features.dart';
 import '../services/drive_sync.dart';
+import '../services/icloud_sync.dart';
 import '../services/library_store.dart';
 import '../services/metronome.dart';
 import '../services/package_service.dart';
@@ -275,6 +276,13 @@ class SettingsScreen extends StatelessWidget {
               ],
             ),
           ),
+          // iCloud sync (iOS/macOS) — behind a flag until provisioned + tested.
+          if (icloudSyncEnabled) ...[
+            const SizedBox(height: 28),
+            const SectionLabel('iCloud Sync', icon: Icons.cloud_outlined),
+            const SizedBox(height: 12),
+            const _ICloudSyncCard(),
+          ],
           // Hidden for the initial release; ships later (maybe paid).
           if (driveSyncEnabled) ...[
             const SizedBox(height: 28),
@@ -624,6 +632,82 @@ class _ProCard extends StatelessWidget {
             label: 'Restore purchase',
             kind: StudioButtonKind.ghost,
             onTap: pro.restore,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// iCloud sync controls + live status (gated by `icloudSyncEnabled`).
+class _ICloudSyncCard extends StatelessWidget {
+  const _ICloudSyncCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final icloud = context.watch<ICloudSyncService>();
+    final (IconData sIcon, String sLabel, Color sColor) = switch (icloud.state) {
+      ICloudState.syncing => (Icons.sync, 'Syncing…', Studio.amber),
+      ICloudState.synced => (Icons.cloud_done_outlined, 'Synced', Studio.amber),
+      ICloudState.error => (Icons.cloud_off_outlined, 'Sync error', Studio.red),
+      ICloudState.unavailable =>
+        (Icons.cloud_off_outlined, 'iCloud unavailable', Studio.textDim),
+      _ => (Icons.cloud_outlined, 'Off', Studio.textDim),
+    };
+    final showErr = icloud.error != null &&
+        (icloud.state == ICloudState.error ||
+            icloud.state == ICloudState.unavailable);
+    return StudioCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.cloud_outlined, size: 22, color: Studio.amber),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Sync with iCloud', style: Studio.title),
+                    const SizedBox(height: 2),
+                    Text('Keep your books in sync across your devices',
+                        style: Studio.bodyDim),
+                  ],
+                ),
+              ),
+              StudioSwitch(
+                value: icloud.autoSync,
+                onChanged: (v) => icloud.setAutoSync(v),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Icon(sIcon, size: 16, color: sColor),
+              const SizedBox(width: 6),
+              Text(sLabel, style: Studio.bodyDim.copyWith(color: sColor)),
+            ],
+          ),
+          if (showErr) ...[
+            const SizedBox(height: 8),
+            Text(icloud.error!,
+                style: TextStyle(fontSize: 12, color: Studio.red)),
+          ],
+          if (icloud.autoSync && icloud.available) ...[
+            const SizedBox(height: 12),
+            StudioButton(
+              label: 'Sync now',
+              kind: StudioButtonKind.ghost,
+              onTap: () => icloud.syncNow(),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Text(
+            'Your library lives in your own private iCloud and stays in sync '
+            'across your devices. Nothing is sent to our servers.',
+            style: Studio.bodyDim,
           ),
         ],
       ),
