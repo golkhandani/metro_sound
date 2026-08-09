@@ -900,6 +900,75 @@ Future<bool> studioConfirm(
   return ok ?? false;
 }
 
+/// The text field inside [studioPrompt]. Focus (and thus the keyboard) is
+/// requested AFTER the dialog's entrance transition finishes, so the dialog
+/// isn't rising and scaling in at the same time the keyboard slides up — which
+/// otherwise reads as a flash / layout jump.
+class _PromptField extends StatefulWidget {
+  final TextEditingController controller;
+  final String hint;
+  final ValueChanged<String> onSubmitted;
+  const _PromptField({
+    required this.controller,
+    required this.hint,
+    required this.onSubmitted,
+  });
+
+  @override
+  State<_PromptField> createState() => _PromptFieldState();
+}
+
+class _PromptFieldState extends State<_PromptField> {
+  final _focus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(milliseconds: 220), () {
+      if (mounted) _focus.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: widget.controller,
+      focusNode: _focus,
+      cursorColor: Studio.amber,
+      style: Studio.body,
+      decoration: InputDecoration(
+        hintText: widget.hint,
+        hintStyle: Studio.bodyDim,
+        filled: true,
+        fillColor: Studio.surfaceHigh,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 12,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Studio.line),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Studio.line),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Studio.amber),
+        ),
+      ),
+      onSubmitted: widget.onSubmitted,
+    );
+  }
+}
+
 Future<String?> studioPrompt(
   BuildContext context, {
   required String title,
@@ -915,33 +984,9 @@ Future<String?> studioPrompt(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          TextField(
+          _PromptField(
             controller: controller,
-            autofocus: true,
-            cursorColor: Studio.amber,
-            style: Studio.body,
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: Studio.bodyDim,
-              filled: true,
-              fillColor: Studio.surfaceHigh,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 12,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: Studio.line),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: Studio.line),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: Studio.amber),
-              ),
-            ),
+            hint: hint,
             onSubmitted: (v) => Navigator.pop(ctx, v),
           ),
           const SizedBox(height: 18),
@@ -1010,12 +1055,12 @@ class _DialogShell extends StatelessWidget {
     return Material(
       type: MaterialType.transparency,
       // Lift the dialog above the on-screen keyboard so its action buttons stay
-      // visible; scroll if the remaining space is tight.
-      child: AnimatedPadding(
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeOut,
+      // visible; scroll if the remaining space is tight. Track the keyboard
+      // inset directly (no extra AnimatedPadding) so the dialog rises smoothly
+      // with the keyboard instead of double-animating / flashing.
+      child: Padding(
         padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
+          bottom: MediaQuery.viewInsetsOf(context).bottom,
         ),
         child: Center(
           child: SingleChildScrollView(

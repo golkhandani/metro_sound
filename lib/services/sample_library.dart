@@ -8,18 +8,20 @@ import 'package:path_provider/path_provider.dart';
 import 'library_store.dart';
 import 'settings.dart';
 
-/// Seeds a small "Getting Started" book on the very first launch so new users
-/// never face an empty library (and the tutorial has real things to point at).
-/// Runs once per install — deleting the book does NOT bring it back.
+/// Seeds a small "Getting Started" book whenever the library is empty, so new
+/// users — and anyone who has cleared everything — always land on real content
+/// to learn from (and the tutorial has real things to point at). Once the user
+/// has their own book(s), the sample is never forced back.
 class SampleLibrary {
   static Future<void> seedIfNeeded(
       LibraryStore library, AppSettings settings) async {
-    if (settings.sampleSeeded) return;
-    // Never overwrite real content (e.g. restored from a backup/import).
+    // The user has real content — leave it alone (and record that we're past
+    // first-run so nothing is ever overwritten).
     if (library.books.isNotEmpty) {
-      await settings.setSampleSeeded(true);
+      if (!settings.sampleSeeded) await settings.setSampleSeeded(true);
       return;
     }
+    // Empty library → (re)seed the sample so the page is never blank/confusing.
 
     try {
       final tmp = await getTemporaryDirectory();
