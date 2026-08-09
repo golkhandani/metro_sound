@@ -122,7 +122,19 @@
       "Bash(echo \"RUN_EXIT=$?\")",
       "Bash(grep -nA1 -E \"NSMicrophoneUsageDescription|NSCameraUsageDescription|NSPhotoLibrary\" ios/Runner/Info.plist)",
       "Bash(xcrun simctl *)",
-      "Bash(open -a Simulator)"
+      "Bash(open -a Simulator)",
+      "Bash(sed -i '' 's/--simulator --debug --dart-define=SHOT=pro/--simulator --release --dart-define=SHOT=pro/' /private/tmp/claude-501/-Users-mrzg-Work-metro-sound/15620c6d-8d70-4056-9724-7086fa1c6d14/cap_pro.sh)",
+      "Bash(bash /private/tmp/claude-501/-Users-mrzg-Work-metro-sound/15620c6d-8d70-4056-9724-7086fa1c6d14/cap_pro.sh)",
+      "Bash(cp pro-paywall.png iap-review-pro-1242.png)",
+      "Bash(sips --resampleHeight 2208 iap-review-pro-1242.png)",
+      "Bash(sips --padToHeightWidth 2208 1242 --padColor 0E0E0E iap-review-pro-1242.png)",
+      "Bash(sips -g pixelWidth -g pixelHeight iap-review-pro-1242.png)",
+      "Bash(idb --version)",
+      "Bash(awk '/^dev_dependencies:/{f=1} f{print} /^flutter:/{if\\(f\\)exit}' pubspec.yaml)",
+      "Bash(flutter drive *)",
+      "Bash(grep -n ''\\\\'' / '\\\\''\\\\|$n / $d\\\\|/ $d\\\\|timeSigLabel\\\\|_timeSigs\\\\|showStudioMenu\\\\|Time signature' lib/screens/player_screen.dart)",
+      "Bash(awk '{print $5, $9}')",
+      "Bash(git branch *)"
     ]
   }
 }
