@@ -134,7 +134,20 @@
       "Bash(flutter drive *)",
       "Bash(grep -n ''\\\\'' / '\\\\''\\\\|$n / $d\\\\|/ $d\\\\|timeSigLabel\\\\|_timeSigs\\\\|showStudioMenu\\\\|Time signature' lib/screens/player_screen.dart)",
       "Bash(awk '{print $5, $9}')",
-      "Bash(git branch *)"
+      "Bash(git branch *)",
+      "Bash(git checkout *)",
+      "Bash(nvim --version)",
+      "Bash(git clone *)",
+      "Bash(rm -rf ~/.config/nvim/.git)",
+      "Bash(nvim --headless \"+Lazy! sync\" +qa)",
+      "Bash(nvim --headless \"+checkhealth lazy\" \"+w! /private/tmp/claude-501/-Users-mrzg-Work-metro-sound/de8d86df-9ccd-48f3-b231-0fee04da9138/scratchpad/health.txt\" +qa)",
+      "Bash(nvim --headless \"+TSUpdate\" +qa)",
+      "Bash(nvim --headless -c \"lua vim.defer_fn\\(function\\(\\) vim.cmd\\('qa!'\\) end, 240000\\)\" -c \"TSUpdate\")",
+      "Bash(mkdir -p ~/.config/ghostty)",
+      "Bash(printf 'font-family = \"JetBrainsMono Nerd Font\"\\\\nfont-size = 14\\\\n')",
+      "Bash(nvim --headless -c \"lua vim.defer_fn\\(function\\(\\) vim.cmd\\('qa!'\\) end, 300000\\)\" -c \"TSUpdate\")",
+      "Bash(nvim --headless -c \"lua vim.defer_fn\\(function\\(\\) vim.cmd\\('qa!'\\) end, 420000\\)\" -c \"MasonToolsInstallSync\" -c \"qa!\")",
+      "Bash(nvim --headless -c \"MasonInstall vtsls pyright ruff json-lsp yaml-language-server dockerfile-language-server docker-compose-language-service taplo marksman prettier\" -c \"qa!\")"
     ]
   }
 }
