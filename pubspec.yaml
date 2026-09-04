@@ -54,6 +54,7 @@ dependencies:
   pitch_detector_dart: ^0.0.7
   shared_preferences: ^2.5.5
   archive: ^4.0.0
+  xml: ^6.5.0
   share_plus: ^10.1.4
   flutter_local_notifications: ^18.0.1
   wakelock_plus: ^1.5.2
