@@ -147,7 +147,12 @@
       "Bash(printf 'font-family = \"JetBrainsMono Nerd Font\"\\\\nfont-size = 14\\\\n')",
       "Bash(nvim --headless -c \"lua vim.defer_fn\\(function\\(\\) vim.cmd\\('qa!'\\) end, 300000\\)\" -c \"TSUpdate\")",
       "Bash(nvim --headless -c \"lua vim.defer_fn\\(function\\(\\) vim.cmd\\('qa!'\\) end, 420000\\)\" -c \"MasonToolsInstallSync\" -c \"qa!\")",
-      "Bash(nvim --headless -c \"MasonInstall vtsls pyright ruff json-lsp yaml-language-server dockerfile-language-server docker-compose-language-service taplo marksman prettier\" -c \"qa!\")"
+      "Bash(nvim --headless -c \"MasonInstall vtsls pyright ruff json-lsp yaml-language-server dockerfile-language-server docker-compose-language-service taplo marksman prettier\" -c \"qa!\")",
+      "Bash(nvim --headless -c \"lua vim.defer_fn\\(function\\(\\) local ok = pcall\\(Snacks.picker.git_status, { layout = { preset = 'sidebar', preview = false } }\\); print\\(ok and 'OK' or 'FAIL'\\); vim.cmd\\('qa!'\\) end, 1500\\)\")",
+      "Bash(nvim --headless -c 'lua vim.defer_fn\\(function\\(\\) *)",
+      "Bash(gh gist *)",
+      "Bash(cp ~/.config/nvim/lua/plugins/git-sidebar.lua /private/tmp/claude-501/-Users-mrzg-Work-metro-sound/de8d86df-9ccd-48f3-b231-0fee04da9138/scratchpad/gist/git-sidebar.lua)",
+      "Bash(sed -i '' 's/open file as side-by-side diff \\(gitsigns\\)/open file as a stacked diff \\(gitsigns; original on top, working copy below\\)/' README.md)"
     ]
   }
 }
