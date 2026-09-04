@@ -1,8 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 
 import '../services/app_reset.dart';
+import '../services/library_store.dart';
 import '../services/pro.dart';
+import '../services/score_synth.dart';
 import '../ui/studio.dart';
 
 /// Developer / testing tools. Only reachable from Settings on a test build
@@ -65,6 +71,43 @@ class AdvancedScreen extends StatelessWidget {
     }
   }
 
+  /// Score→audio spike: synthesize [sampleScore] into a WAV whose notes sit on
+  /// an exact beat grid, import it as a normal track with the score's tempo and
+  /// time signature as its metronome preset. With lock-to-music on, the click
+  /// and the notes derive from the same grid, so they cannot drift.
+  Future<void> _generateScoreDemo(BuildContext context) async {
+    final library = context.read<LibraryStore>();
+    try {
+      final tmp = await getTemporaryDirectory();
+      final f = File(p.join(tmp.path, '${sampleScore.title}.wav'));
+      await f.writeAsBytes(renderScoreWav(sampleScore));
+
+      final book = library.books.where((b) => b.title == 'Score Lab').isEmpty
+          ? await library.createBook('Score Lab')
+          : library.books.firstWhere((b) => b.title == 'Score Lab');
+      await library.importAudioFiles(book.id, [f.path]);
+
+      final track = library.tracksForBook(book.id).last;
+      track
+        ..bpm = sampleScore.bpm
+        ..beatsPerBar = sampleScore.beatsPerBar
+        ..timeSigDenominator = sampleScore.denominator
+        ..metronomeOn = true;
+      await library.updateTrack(track);
+
+      try {
+        await f.delete();
+      } catch (_) {}
+      if (context.mounted) {
+        showToast(context,
+            'Added to "Score Lab" at ${sampleScore.bpm} BPM — play it with the '
+            'metronome locked.');
+      }
+    } catch (e) {
+      if (context.mounted) showToast(context, 'Score demo failed: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return StudioScaffold(
@@ -96,6 +139,18 @@ class AdvancedScreen extends StatelessWidget {
                   onTap: () => _eraseAll(context),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: 28),
+          const SectionLabel('Score Lab', icon: Icons.music_note_outlined),
+          const SizedBox(height: 12),
+          StudioCard(
+            child: _Action(
+              icon: Icons.auto_awesome_outlined,
+              title: 'Generate track from score',
+              subtitle: 'Synthesize the built-in demo exercise into a playable '
+                  'track with a matching metronome preset (score→audio spike).',
+              onTap: () => _generateScoreDemo(context),
             ),
           ),
           const SizedBox(height: 28),
