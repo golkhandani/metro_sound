@@ -13,6 +13,7 @@ import '../widgets/coach_marks.dart';
 import '../widgets/import_preview_sheet.dart';
 import '../widgets/package_progress_sheet.dart';
 import '../widgets/pro_sheet.dart';
+import '../widgets/score_scan_flow.dart';
 import 'book_screen.dart';
 
 class BooksScreen extends StatelessWidget {
@@ -139,6 +140,12 @@ class BooksScreen extends StatelessWidget {
       title: 'Metro Sound',
       subtitle: 'Practice Library',
       actions: [
+        if (context.watch<Pro>().isTestBuild)
+          StudioIconButton(
+            icon: Icons.document_scanner_outlined,
+            tooltip: 'Add from score',
+            onTap: () => runScoreScanFlow(context),
+          ),
         KeyedSubtree(
           key: CoachKeys.booksImport,
           child: StudioIconButton(

@@ -2,16 +2,14 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 
 import '../services/app_reset.dart';
-import '../services/library_store.dart';
 import '../services/musicxml.dart';
 import '../services/pro.dart';
 import '../services/score_synth.dart';
 import '../ui/studio.dart';
+import '../widgets/score_scan_flow.dart';
 
 /// Developer / testing tools. Only reachable from Settings on a test build
 /// (debug or TestFlight); hidden entirely in the production App Store because
@@ -73,53 +71,6 @@ class AdvancedScreen extends StatelessWidget {
     }
   }
 
-  /// Score→audio spike: synthesize a [Score] into a WAV whose notes sit on an
-  /// exact beat grid, import it as a normal track with the chosen tempo and the
-  /// score's time signature as its metronome preset. With lock-to-music on, the
-  /// click and the notes derive from the same grid, so they cannot drift.
-  Future<void> _makeTrackFromScore(BuildContext context, Score score) async {
-    final entered = await studioPrompt(
-      context,
-      title: 'Tempo (BPM)',
-      initial: '${score.bpm}',
-      hint: 'Marked tempo: ${score.bpm}',
-    );
-    if (entered == null || !context.mounted) return;
-    final bpm = (int.tryParse(entered.trim()) ?? score.bpm).clamp(20, 300);
-
-    final library = context.read<LibraryStore>();
-    try {
-      final tmp = await getTemporaryDirectory();
-      final safe = score.title.replaceAll(RegExp(r'[^\w\- ()]'), '').trim();
-      final f = File(p.join(tmp.path, '${safe.isEmpty ? 'Score' : safe}.wav'));
-      await f.writeAsBytes(renderScoreWav(score, bpm: bpm));
-
-      final book = library.books.where((b) => b.title == 'Score Lab').isEmpty
-          ? await library.createBook('Score Lab')
-          : library.books.firstWhere((b) => b.title == 'Score Lab');
-      await library.importAudioFiles(book.id, [f.path]);
-
-      final track = library.tracksForBook(book.id).last;
-      track
-        ..bpm = bpm
-        ..beatsPerBar = score.beatsPerBar
-        ..timeSigDenominator = score.denominator
-        ..metronomeOn = true;
-      await library.updateTrack(track);
-
-      try {
-        await f.delete();
-      } catch (_) {}
-      if (context.mounted) {
-        showToast(context,
-            'Added to "Score Lab" at $bpm BPM — play it with the metronome '
-            'locked.');
-      }
-    } catch (e) {
-      if (context.mounted) showToast(context, 'Score demo failed: $e');
-    }
-  }
-
   /// Import a MusicXML file (.xml / .musicxml / .mxl — e.g. exported from
   /// MuseScore or produced by OMR) and synthesize it into a practice track.
   Future<void> _importMusicXml(BuildContext context) async {
@@ -140,7 +91,9 @@ class AdvancedScreen extends StatelessWidget {
         return;
       }
       final score = parseMusicXmlBytes(bytes, filename: picked.name);
-      if (context.mounted) await _makeTrackFromScore(context, score);
+      if (context.mounted) {
+        await addScoreTrack(context, score, bookTitle: 'Score Lab');
+      }
     } on MusicXmlException catch (e) {
       if (context.mounted) showToast(context, e.message);
     } catch (e) {
@@ -193,7 +146,8 @@ class AdvancedScreen extends StatelessWidget {
                   title: 'Generate track from score',
                   subtitle: 'Synthesize the built-in demo exercise into a '
                       'playable track with a matching metronome preset.',
-                  onTap: () => _makeTrackFromScore(context, sampleScore),
+                  onTap: () =>
+                      addScoreTrack(context, sampleScore, bookTitle: 'Score Lab'),
                 ),
                 const Divider(height: 24),
                 _Action(
